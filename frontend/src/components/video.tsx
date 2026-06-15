@@ -51,6 +51,11 @@ export default function Video({ URL, startTime, nextItemId, endTime, points, ano
   const lastSeekErrorToastRef = useRef<number>(0);
   const [playerReady, setPlayerReady] = useState(false);
   const [playing, setPlaying] = useState(false);
+  // Tracks whether the Vibe tab is currently visible. Used to prevent autoplay
+  // from starting the lecture while the user is on another tab (proctoring).
+  const [isTabVisible, setIsTabVisible] = useState(
+    typeof document !== 'undefined' ? !document.hidden : true,
+  );
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   // const [volume, setVolume] = useState(100);
@@ -224,13 +229,24 @@ export default function Video({ URL, startTime, nextItemId, endTime, points, ano
       if (!player) return;
 
       if (document.hidden) {
-        if (playing) {
+        setIsTabVisible(false);
+        // Determine "was actually playing" from the player's real state, not the
+        // (async, lagging) React `playing` flag. PLAYING=1, BUFFERING=3 both mean
+        // the lecture is running / about to run.
+        const ytState = player.getPlayerState?.();
+        const isActuallyPlaying =
+          playing ||
+          ytState === window.YT?.PlayerState?.PLAYING ||
+          ytState === window.YT?.PlayerState?.BUFFERING;
+        if (isActuallyPlaying) {
           wasPlayingBeforeTabSwitch.current = true;
-          player.pauseVideo();
-        } else {
-          wasPlayingBeforeTabSwitch.current = false;
         }
+        // Always pause defensively when hidden (no-op if already paused). This
+        // closes the window where playVideo() was issued but `playing` hasn't
+        // flipped true yet, so the lecture can never run on a hidden tab.
+        player.pauseVideo();
       } else {
+        setIsTabVisible(true);
         if (wasPlayingBeforeTabSwitch.current && playerReady) {
           player.playVideo();
           setTimeout(() => { playerRef.current?.setPlaybackRate?.(playbackRate); }, 50);
@@ -502,6 +518,7 @@ export default function Video({ URL, startTime, nextItemId, endTime, points, ano
     if (playerReady &&
       readyToDetect &&
       gracePeriodCompleted && // Wait for grace period
+      isTabVisible && // Never start the lecture while the user is on another tab
       player &&
       !playing &&
       !pauseVid &&
@@ -513,6 +530,7 @@ export default function Video({ URL, startTime, nextItemId, endTime, points, ano
 
       const timer = setTimeout(() => {
         if (playerRef.current &&
+          !document.hidden && // Re-check at fire time: tab may have been hidden during the delay
           !playing &&
           !pauseVid &&
           !rewindVid &&
@@ -526,7 +544,7 @@ export default function Video({ URL, startTime, nextItemId, endTime, points, ano
 
       return () => clearTimeout(timer);
     }
-  }, [playerReady, readyToDetect, gracePeriodCompleted, playing, pauseVid, rewindVid, doGesture, videoEnded]);
+  }, [playerReady, readyToDetect, gracePeriodCompleted, isTabVisible, playing, pauseVid, rewindVid, doGesture, videoEnded]);
 
   // Autoplay: Only trigger once when everything becomes ready
   // useEffect(() => {

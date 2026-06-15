@@ -36,6 +36,7 @@ export interface YTPlayerInstance {
   setVolume: (volume: number) => void;
   setPlaybackRate: (rate: number) => void;
   getAvailablePlaybackRates?: () => number[];
+  getPlayerState?: () => number;
   anomalies?: string[];
 }
 
@@ -54,7 +55,7 @@ declare global {
           };
         }
       ) => YTPlayerInstance;
-      PlayerState: { PLAYING: number; ENDED: number; PAUSED: number };
+      PlayerState: { PLAYING: number; ENDED: number; PAUSED: number; BUFFERING: number };
     };
     onYouTubeIframeAPIReady?: () => void;
   }
