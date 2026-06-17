@@ -63,23 +63,8 @@ import {
 } from '#root/modules/auditTrails/interfaces/IAuditTrails.js';
 import {setAuditTrail} from '#root/utils/setAuditTrail.js';
 import {ObjectId} from 'mongodb';
-import {SETTING_TYPES} from '#root/modules/setting/types.js';
-import {TimeSlotService} from '#root/modules/setting/services/TimeSlotService.js';
 import {EnrollmentService} from '#root/modules/users/services/EnrollmentService.js';
 import {USERS_TYPES} from '#root/modules/users/types.js';
-
-/**
- * Distinct 403 for the time-slot / commitment gate so the frontend can tell it apart
- * from a generic ForbiddenError (e.g. linear-progression locks) and surface the right
- * "book a time slot" message + CTA instead of the generic "lesson locked" notice.
- */
-export class TimeSlotAccessError extends ForbiddenError {
-  constructor(message?: string) {
-    super(message);
-    this.name = 'TimeSlotAccessDenied';
-    Object.setPrototypeOf(this, TimeSlotAccessError.prototype);
-  }
-}
 
 @OpenAPI({
   tags: ['Course Items'],
@@ -92,8 +77,6 @@ export class ItemController {
     private readonly itemService: ItemService,
     @inject(QUIZZES_TYPES.QuizService)
     private readonly quizService: QuizService,
-    @inject(SETTING_TYPES.TimeSlotService)
-    private readonly timeSlotService: TimeSlotService,
     @inject(USERS_TYPES.EnrollmentService)
     private readonly enrollmentService: EnrollmentService,
   ) {}
@@ -222,28 +205,6 @@ export class ItemController {
       throw new ForbiddenError(
         'You do not have permission to view items in this section',
       );
-    }
-
-    // Time-slot ("commitment") gate: a student may only load section content
-    // during a booked window. Instructors/managers/TAs bypass. This mirrors the
-    // gate on getItem — without it, the player can fetch full item content here
-    // and skip the per-item check entirely.
-    const canManageGate = ability.can(
-      ItemActions.Modify,
-      subject('Item', {versionId}),
-    );
-    if (!canManageGate) {
-      const access =
-        await this.timeSlotService.canStudentAccessCourseByVersion(
-          user._id.toString(),
-          versionId,
-          cohortId,
-        );
-      if (!access.canAccess) {
-        throw new TimeSlotAccessError(
-          access.message || 'Time slot access denied',
-        );
-      }
     }
 
     const items = await this.itemService.readAllItems(
@@ -739,45 +700,11 @@ Access control logic:
   })
   async getItem(
     @Params() params: GetItemParams,
-    @Ability(getItemAbility) { ability },
     @CurrentUser() user: { _id: string },
     @QueryParam('cohortId') cohortId?: string,
   ) {
     const {versionId, itemId, courseId, moduleId, sectionId} = params;
     const {_id: userId} = user;
-
-    // Check if user is instructor/manager/TA - they should bypass time slot validation
-    const sampleItemResource = subject('Item', {versionId});
-    const canManage = ability.can(ItemActions.Modify, sampleItemResource);
-
-    if (!canManage) {
-      // Only apply time slot validation for students
-      try {
-        const timeSlotAccess =
-          await this.timeSlotService.canStudentAccessCourse(
-            userId.toString(),
-            courseId,
-            versionId,
-            cohortId,
-          );
-
-        if (!timeSlotAccess.canAccess) {
-          throw new TimeSlotAccessError(
-            timeSlotAccess.message || 'Time slot access denied',
-          );
-        }
-      } catch (error) {
-        // Re-throw our intended 403s (time-slot block or any ForbiddenError) untouched
-        // so the frontend can distinguish them by name.
-        if (
-          error.name === 'TimeSlotAccessDenied' ||
-          error.name === 'ForbiddenError'
-        ) {
-          throw error;
-        }
-        throw new ForbiddenError('Time slot access check failed');
-      }
-    }
 
     // Create an item resource object for permission checking
     const itemResource = subject('Item', {courseId, versionId, itemId});

@@ -5696,6 +5696,305 @@ export function useSetHoursBudget() {
   return { setHoursBudget, loading, error };
 }
 
+// PUT /timeslots/extend — grant a student extra committed hours (raw fetch).
+export function useGrantExtraHours() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const grantExtraHours = async (
+    courseId: string,
+    courseVersionId: string,
+    studentId: string,
+    extraHours: number,
+  ): Promise<{ commitmentExtraHours: number }> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const url = `${import.meta.env.VITE_BASE_URL}/timeslots/extend`;
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          authorization: `Bearer ${localStorage.getItem('firebase-auth-token')}`,
+        },
+        body: JSON.stringify({ courseId, courseVersionId, studentId, extraHours }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.message || `Failed to grant extra hours: ${res.status}`);
+      }
+      return data?.data;
+    } catch (err: any) {
+      setError(err.message || 'Unknown error');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { grantExtraHours, loading, error };
+}
+
+export interface SlotDemandData {
+  date: string;
+  isActive: boolean;
+  slots: Array<{
+    from: string;
+    to: string;
+    maxStudents: number | null;
+    booked: number;
+    remaining: number | null;
+  }>;
+}
+
+// GET /slot-bookings/availability/course/{courseId}/version/{courseVersionId}
+// Seats remaining + booked count per window for an IST day (default today), so
+// an enrolled student can see capacity while picking a slot. Counts only.
+export function useSlotAvailability(
+  courseId: string | undefined,
+  courseVersionId: string | undefined,
+  date?: string,
+  enabled: boolean = true,
+): {
+  data: SlotDemandData | undefined;
+  isLoading: boolean;
+  error: string | null;
+  refetch: () => void;
+} {
+  const day = date ?? istToday();
+  const valid =
+    !!courseId &&
+    courseId.length === 24 &&
+    !!courseVersionId &&
+    courseVersionId.length === 24;
+  const result = useQuery({
+    queryKey: ['slot-availability', courseId, courseVersionId, day],
+    enabled: enabled && valid,
+    queryFn: async (): Promise<SlotDemandData> => {
+      const url = `${import.meta.env.VITE_BASE_URL}/slot-bookings/availability/course/${courseId}/version/${courseVersionId}?date=${encodeURIComponent(day)}`;
+      const res = await fetch(url, {
+        headers: {
+          authorization: `Bearer ${localStorage.getItem('firebase-auth-token')}`,
+        },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.message || `Failed to load availability: ${res.status}`);
+      }
+      return data?.data as SlotDemandData;
+    },
+  });
+  return {
+    data: result.data,
+    isLoading: result.isLoading,
+    error: result.error ? (result.error as Error).message : null,
+    refetch: () => {
+      void result.refetch();
+    },
+  };
+}
+
+// GET /slot-bookings/demand/course/{courseId}/version/{courseVersionId}
+// Booked load per window for an IST day (the "demand schedule" for capacity
+// planning). Instructors/managers only. Raw fetch via react-query.
+export function useSlotDemand(
+  courseId: string | undefined,
+  courseVersionId: string | undefined,
+  date?: string,
+  enabled: boolean = true,
+): {
+  data: SlotDemandData | undefined;
+  isLoading: boolean;
+  error: string | null;
+  refetch: () => void;
+} {
+  const valid =
+    !!courseId &&
+    courseId.length === 24 &&
+    !!courseVersionId &&
+    courseVersionId.length === 24;
+  const result = useQuery({
+    queryKey: ['slot-demand', courseId, courseVersionId, date ?? 'today'],
+    enabled: enabled && valid,
+    queryFn: async (): Promise<SlotDemandData> => {
+      const q = date ? `?date=${encodeURIComponent(date)}` : '';
+      const url = `${import.meta.env.VITE_BASE_URL}/slot-bookings/demand/course/${courseId}/version/${courseVersionId}${q}`;
+      const res = await fetch(url, {
+        headers: {
+          authorization: `Bearer ${localStorage.getItem('firebase-auth-token')}`,
+        },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.message || `Failed to load slot demand: ${res.status}`);
+      }
+      return data?.data as SlotDemandData;
+    },
+  });
+  return {
+    data: result.data,
+    isLoading: result.isLoading,
+    error: result.error ? (result.error as Error).message : null,
+    refetch: () => {
+      void result.refetch();
+    },
+  };
+}
+
+export interface MyBooking {
+  _id: string;
+  date: string;
+  from: string;
+  to: string;
+  kind?: string;
+  status?: string;
+  hoursReserved?: number;
+}
+
+// IST "today" as YYYY-MM-DD — matches the backend's getCurrentISTDate so the
+// daily-allowance math lines up regardless of the viewer's local timezone.
+export function istToday(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+}
+
+// GET /slot-bookings/my/course/{courseId}/version/{courseVersionId}?date=
+// The calling student's active bookings for an IST day (default today).
+export function useMyBookings(
+  courseId: string | undefined,
+  courseVersionId: string | undefined,
+  date?: string,
+  enabled: boolean = true,
+): {
+  data: MyBooking[] | undefined;
+  isLoading: boolean;
+  error: string | null;
+  refetch: () => void;
+} {
+  const day = date ?? istToday();
+  const valid =
+    !!courseId &&
+    courseId.length === 24 &&
+    !!courseVersionId &&
+    courseVersionId.length === 24;
+  const result = useQuery({
+    queryKey: ['my-bookings', courseId, courseVersionId, day],
+    enabled: enabled && valid,
+    queryFn: async (): Promise<MyBooking[]> => {
+      const url = `${import.meta.env.VITE_BASE_URL}/slot-bookings/my/course/${courseId}/version/${courseVersionId}?date=${encodeURIComponent(day)}`;
+      const res = await fetch(url, {
+        headers: {
+          authorization: `Bearer ${localStorage.getItem('firebase-auth-token')}`,
+        },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.message || `Failed to load bookings: ${res.status}`);
+      }
+      return (data?.data ?? []) as MyBooking[];
+    },
+  });
+  return {
+    data: result.data,
+    isLoading: result.isLoading,
+    error: result.error ? (result.error as Error).message : null,
+    refetch: () => {
+      void result.refetch();
+    },
+  };
+}
+
+// POST /slot-bookings/book — book a time slot for today (raw fetch). The backend
+// returns { success:false, message } for capacity/allowance/budget rejections
+// (HTTP 200), so callers must check `success`, not just the HTTP status.
+export function useBookSlot() {
+  const [loading, setLoading] = useState(false);
+  const book = async (
+    courseId: string,
+    courseVersionId: string,
+    timeSlot: { from: string; to: string },
+    cohortId?: string,
+  ): Promise<{ success: boolean; message?: string }> => {
+    setLoading(true);
+    try {
+      const url = `${import.meta.env.VITE_BASE_URL}/slot-bookings/book`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          authorization: `Bearer ${localStorage.getItem('firebase-auth-token')}`,
+        },
+        body: JSON.stringify({ courseId, courseVersionId, timeSlot, cohortId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        return { success: false, message: data?.message || `Failed to book: ${res.status}` };
+      }
+      return { success: data?.success !== false, message: data?.message };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'Network error' };
+    } finally {
+      setLoading(false);
+    }
+  };
+  return { book, loading };
+}
+
+// POST /slot-bookings/cancel — cancel one of the student's own bookings.
+export function useCancelBooking() {
+  const [loading, setLoading] = useState(false);
+  const cancel = async (
+    bookingId: string,
+  ): Promise<{ success: boolean; message?: string }> => {
+    setLoading(true);
+    try {
+      const url = `${import.meta.env.VITE_BASE_URL}/slot-bookings/cancel`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          authorization: `Bearer ${localStorage.getItem('firebase-auth-token')}`,
+        },
+        body: JSON.stringify({ bookingId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        return { success: false, message: data?.message || `Failed to cancel: ${res.status}` };
+      }
+      return { success: data?.success !== false, message: data?.message };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'Network error' };
+    } finally {
+      setLoading(false);
+    }
+  };
+  return { cancel, loading };
+}
+
+// Imperative check used to gate entry on the "Continue Learning" click.
+// Returns { canAccess, message }. Fails OPEN (allows) on any network/error so a
+// transient failure never locks a student out — the backend gate is the backstop.
+export function useCheckTimeSlotAccessOnDemand() {
+  const check = async (
+    courseId: string,
+    courseVersionId: string,
+  ): Promise<{ canAccess: boolean; message?: string }> => {
+    try {
+      const url = `${import.meta.env.VITE_BASE_URL}/timeslots/check-access/${courseId}/${courseVersionId}`;
+      const res = await fetch(url, {
+        headers: {
+          authorization: `Bearer ${localStorage.getItem('firebase-auth-token')}`,
+        },
+      });
+      if (!res.ok) return { canAccess: true };
+      const data = await res.json().catch(() => ({ canAccess: true }));
+      return { canAccess: data?.canAccess !== false, message: data?.message };
+    } catch {
+      return { canAccess: true };
+    }
+  };
+  return { check };
+}
+
 // GET /timeslots/check-access/{courseId}/{courseVersionId}
 // Pass pollMs to poll for a live cut-off when a booked window ends.
 export function useCheckTimeSlotAccess(
