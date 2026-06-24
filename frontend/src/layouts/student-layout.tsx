@@ -170,7 +170,7 @@ percentCompleted !== 100){
   }, [showInvites, selectedInvite]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-background/95 bg-gray-50/50 dark:bg-orange-950/70">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-background/95 bg-gray-50/50 dark:from-[#1e1e22] dark:via-[#191a1d] dark:to-[#151517]">
 
       {/* <FloatingVideo isVisible={user?.role === 'student'}></FloatingVideo> */}
       <ConfirmationModal isOpen={confirmLogout}
@@ -470,7 +470,7 @@ percentCompleted !== 100){
 
       <main className="relative flex flex-1 flex-col p-6">
         {/* Content background gradient */}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/50 to-background pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/50 to-background dark:via-[#19191c]/40 dark:to-[#151517] pointer-events-none" />
         <div className="relative z-10 h-full">
           <Outlet />
         </div>

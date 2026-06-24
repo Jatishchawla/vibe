@@ -175,9 +175,27 @@ export const CourseCard = ({ enrollment, index, isLoading, variant = 'dashboard'
 
   if (variant === 'dashboard' || variant === 'available') {
     const themes = [
-      { bg: "bg-[#F3E8FF]", icon: "text-[#A855F7]", progress: "bg-[#A855F7]", iconComponent: <Play className="w-10 md:w-12 h-10 md:h-12" /> },
-      { bg: "bg-[#DBEAFE]", icon: "text-[#3B82F6]", progress: "bg-[#3B82F6]", iconComponent: <Activity className="w-10 md:w-12 h-10 md:h-12" /> },
-      { bg: "bg-[#FCE7F3]", icon: "text-[#EC4899]", progress: "bg-[#EC4899]", iconComponent: <Users className="w-10 md:w-12 h-10 md:h-12" /> },
+      {
+        bg: "bg-[#F3E8FF]", icon: "text-[#A855F7]", iconDark: "dark:text-violet-300", progress: "bg-[#A855F7]",
+        bannerLight: "bg-gradient-to-br from-violet-100 via-violet-50 to-white",
+        bannerDark: "dark:from-violet-500/25 dark:via-violet-500/5 dark:to-transparent",
+        glow: "bg-violet-500/25",
+        iconComponent: <Play className="w-10 md:w-12 h-10 md:h-12" />,
+      },
+      {
+        bg: "bg-[#DBEAFE]", icon: "text-[#3B82F6]", iconDark: "dark:text-blue-300", progress: "bg-[#3B82F6]",
+        bannerLight: "bg-gradient-to-br from-blue-100 via-blue-50 to-white",
+        bannerDark: "dark:from-blue-500/25 dark:via-blue-500/5 dark:to-transparent",
+        glow: "bg-blue-500/25",
+        iconComponent: <Activity className="w-10 md:w-12 h-10 md:h-12" />,
+      },
+      {
+        bg: "bg-[#FCE7F3]", icon: "text-[#EC4899]", iconDark: "dark:text-pink-300", progress: "bg-[#EC4899]",
+        bannerLight: "bg-gradient-to-br from-pink-100 via-pink-50 to-white",
+        bannerDark: "dark:from-pink-500/25 dark:via-pink-500/5 dark:to-transparent",
+        glow: "bg-pink-500/25",
+        iconComponent: <Users className="w-10 md:w-12 h-10 md:h-12" />,
+      },
     ];
     const theme = themes[index % themes.length];
 
@@ -195,9 +213,15 @@ export const CourseCard = ({ enrollment, index, isLoading, variant = 'dashboard'
               )}
               onClick={() => variant !== 'available' && setIsFlipped(true)}
             >
-              {/* Thumbnail/Icon Area */}
-              <div className={cn("relative flex justify-center items-center w-full aspect-[4/3] transition-colors duration-300", theme.bg, "dark:bg-gradient-to-br dark:from-white/[0.06] dark:to-white/[0.02]")}>
-                <div className={cn("group-hover:scale-110 transition-transform duration-500", theme.icon)}>
+              {/* Thumbnail/Icon Area — soft tint in light, dark gradient + accent glow in dark */}
+              <div className={cn(
+                "relative flex justify-center items-center w-full aspect-[4/3] overflow-hidden transition-colors duration-300",
+                theme.bannerLight,
+                "dark:bg-[#17171a] dark:bg-gradient-to-br", theme.bannerDark
+              )}>
+                {/* Accent glow for a glossy, on-theme feel */}
+                <div aria-hidden className={cn("pointer-events-none absolute -top-8 -right-8 h-28 w-28 rounded-full blur-2xl opacity-60 transition-opacity duration-300 group-hover:opacity-90", theme.glow)} />
+                <div className={cn("relative group-hover:scale-110 transition-transform duration-500", theme.icon, theme.iconDark)}>
                   {theme.iconComponent}
                 </div>
                 {enrollment.hasNewItemsAfterCompletion && (

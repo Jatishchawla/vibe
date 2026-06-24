@@ -6,7 +6,7 @@ import { useNavigate } from "@tanstack/react-router";
 // Import components
 import { StatCard } from "@/components/ui/StatCard";
 import { CourseSection } from "@/components/course/CourseSection";
-import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
+// import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar"; // Hidden: Learning Checklist sidebar (commented out, not removed)
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getGreeting } from "@/utils/helpers";
 import type { CourseCardProps } from '@/types/course.types';
@@ -474,11 +474,12 @@ function DashboardContent() {
             </Tabs>
 
           </main>
-          <aside className="w-full lg:w-80">
+          {/* Hidden: Learning Checklist sidebar (commented out, not removed) */}
+          {/* <aside className="w-full lg:w-80">
             <div className="sticky top-6">
               <DashboardSidebar enrollments={enrollments} />
             </div>
-          </aside>
+          </aside> */}
         </div>
       </div>
     </>
