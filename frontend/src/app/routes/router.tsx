@@ -70,6 +70,7 @@ import StudentSubmissions from '@/app/pages/student/hp-system/submissions'
 import StudentMyLedgerPage from '@/app/pages/student/hp-system/student-ledger'
 import StudentActivityDetail from '@/app/pages/student/hp-system/activity-detail'
 import NotificationsPage from '@/app/pages/shared/NotificationsPage'
+import VoiceQuiz from '@/app/pages/sandbox/VoiceQuiz'
 
 // Root route with error and notFound handling
 const rootRoute = new RootRoute({
@@ -626,6 +627,13 @@ const coursePageRoute = new Route({
   },
 });
 
+// Isolated sandbox route for the interactive voice-quiz demo (public, no guard).
+const voiceQuizRoute = new Route({
+  getParentRoute: () => rootRoute,
+  path: '/sandbox/voice-quiz',
+  component: VoiceQuiz,
+});
+
 // Create a catch-all not found route
 const notFoundRoute = new NotFoundRoute({
   getParentRoute: () => rootRoute,
@@ -726,6 +734,7 @@ const routeTree = rootRoute.addChildren([
     studentNotificationsRoute,
   ]),
   coursePageRoute,
+  voiceQuizRoute,
 ]);
 
 // For server-side rendering compatibility
