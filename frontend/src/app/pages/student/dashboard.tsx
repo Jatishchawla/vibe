@@ -206,18 +206,7 @@ function DashboardContent() {
       {/* Auto-popup any announcements the student hasn't seen yet */}
       <NewAnnouncementsPopup />
       <div className="container mx-auto px-0 sm:px-6 lg:px-8 xl:px-0 py-6">
-        {/*
-          Dashboard "screen": a glossy dark-GRAY surface in dark mode (never pure
-          black) and a clean light surface in light mode. Scoped here so the rest
-          of the app's theme is untouched.
-        */}
-        <div
-          className={cn(
-            "flex flex-col gap-6 rounded-[28px] p-3 transition-colors duration-300 sm:p-4 lg:flex-row lg:p-5",
-            "bg-transparent",
-            "dark:border dark:border-white/[0.05] dark:bg-gradient-to-b dark:from-[#202024] dark:via-[#1b1b1f] dark:to-[#171719] dark:shadow-xl dark:shadow-black/30"
-          )}
-        >
+        <div className="flex flex-col gap-6 lg:flex-row">
           <main className="w-full min-w-0 flex-1 space-y-6">
             {/* Hero + Stat Cards Section */}
             <section className="relative overflow-hidden rounded-3xl border border-neutral-200/70 bg-white p-6 shadow-sm ring-1 ring-black/[0.02] dark:border-white/[0.06] dark:bg-white/[0.03] dark:ring-white/[0.04] sm:p-8">
@@ -241,7 +230,6 @@ function DashboardContent() {
                   value={statsLoading ? "—" : `${enrolledCount}`}
                   label="Enrolled Courses"
                   sublabel="In your catalog"
-                  decoration="📚"
                 />
                 <StatCard
                   tone="emerald"
@@ -249,7 +237,6 @@ function DashboardContent() {
                   value={statsLoading ? "—" : `${totalProgress}%`}
                   label="Overall Progress"
                   sublabel="Across all courses"
-                  decoration="🎯"
                 />
                 <StatCard
                   tone="violet"
@@ -257,7 +244,6 @@ function DashboardContent() {
                   value={statsLoading ? "—" : `${completedCount}`}
                   label="Courses Completed"
                   sublabel="Successfully finished"
-                  decoration="✅"
                 />
               </div>
             </section>

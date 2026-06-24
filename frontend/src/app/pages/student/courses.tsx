@@ -166,14 +166,13 @@ export default function StudentCourses() {
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
           <div className="flex md:flex-row flex-col items-center justify-between gap-2">
             <div className="relative flex-1 md:max-w-md w-full">
-              <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg blur-sm"></div>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search courses..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 bg-background border-border focus:border-primary focus:ring-primary/20 transition-all duration-300"
+                  className="pl-10 h-11 bg-background border-border dark:bg-white/[0.05] dark:border-white/15 dark:hover:border-white/25 dark:placeholder:text-white/40 focus:border-primary focus:ring-primary/20 transition-all duration-300"
                 />
               </div>
               <div className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground">

@@ -46,6 +46,8 @@ export default function StudentLayout() {
 
   const { hasNew: hasNewAnnouncements, markSeen: markAnnouncementsSeen } = useNewAnnouncementIndicator();
   const pathname = location.pathname;
+  // Dark-gray glassy navbar only on the redesigned pages: dashboard + courses.
+  const isThemedHeaderPage = pathname === "/student" || pathname === "/student/courses";
 
   const [approvedNotificationsList, setApprovedNotificationsList] = useState<any[]>([]);
   const [localRejectedRegistrations, setLocalRejectedRegistrations] = useState<any[]>([]);
@@ -182,7 +184,7 @@ percentCompleted !== 100){
       {/* Ambient background effect */}
       <div className="fixed inset-0 bg-gradient-to-br from-primary/[0.02] via-transparent to-secondary/[0.02] pointer-events-none" />
 
-      <header className="sticky top-0 z-50 flex h-16 shrink-0 items-center gap-2 border-b border-border/20 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 transition-all duration-300 before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-primary/[0.02] before:to-transparent before:opacity-0 hover:before:opacity-100 before:transition-opacity before:duration-500">
+      <header className={`sticky top-0 z-50 flex h-16 shrink-0 items-center gap-2 border-b border-border/20 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 transition-all duration-300 before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-primary/[0.02] before:to-transparent before:opacity-0 hover:before:opacity-100 before:transition-opacity before:duration-500 ${isThemedHeaderPage ? "dark:border-white/[0.06] dark:bg-[#1b1b1f]/80 dark:supports-[backdrop-filter]:bg-[#1b1b1f]/70" : ""}`}>
         <div className="flex w-full items-center justify-between px-4 sm:px-8 relative z-10">
           <div className="flex items-center gap-8">
             <Link to="/student" className="relative z-20 flex items-center text-xl font-bold tracking-tight group cursor-pointer">
@@ -375,7 +377,7 @@ percentCompleted !== 100){
         </div>
 
         {isMobileMenuOpen && (
-          <div className="md:hidden absolute top-16 left-0 right-0 bg-background/95 backdrop-blur-xl border-b border-border/20 shadow-lg">
+          <div className={`md:hidden absolute top-16 left-0 right-0 bg-background/95 backdrop-blur-xl border-b border-border/20 shadow-lg ${isThemedHeaderPage ? "dark:bg-[#1b1b1f]/95 dark:border-white/[0.06]" : ""}`}>
             <div className="px-4 py-4 space-y-2">
               <Button
                 variant="ghost"

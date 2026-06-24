@@ -180,21 +180,21 @@ export const CourseCard = ({ enrollment, index, isLoading, variant = 'dashboard'
         bannerLight: "bg-gradient-to-br from-violet-100 via-violet-50 to-white",
         bannerDark: "dark:from-violet-500/25 dark:via-violet-500/5 dark:to-transparent",
         glow: "bg-violet-500/25",
-        iconComponent: <Play className="w-10 md:w-12 h-10 md:h-12" />,
+        iconComponent: <Play className="w-8 md:w-10 h-8 md:h-10" />,
       },
       {
         bg: "bg-[#DBEAFE]", icon: "text-[#3B82F6]", iconDark: "dark:text-blue-300", progress: "bg-[#3B82F6]",
         bannerLight: "bg-gradient-to-br from-blue-100 via-blue-50 to-white",
         bannerDark: "dark:from-blue-500/25 dark:via-blue-500/5 dark:to-transparent",
         glow: "bg-blue-500/25",
-        iconComponent: <Activity className="w-10 md:w-12 h-10 md:h-12" />,
+        iconComponent: <Activity className="w-8 md:w-10 h-8 md:h-10" />,
       },
       {
         bg: "bg-[#FCE7F3]", icon: "text-[#EC4899]", iconDark: "dark:text-pink-300", progress: "bg-[#EC4899]",
         bannerLight: "bg-gradient-to-br from-pink-100 via-pink-50 to-white",
         bannerDark: "dark:from-pink-500/25 dark:via-pink-500/5 dark:to-transparent",
         glow: "bg-pink-500/25",
-        iconComponent: <Users className="w-10 md:w-12 h-10 md:h-12" />,
+        iconComponent: <Users className="w-8 md:w-10 h-8 md:h-10" />,
       },
     ];
     const theme = themes[index % themes.length];
@@ -209,13 +209,12 @@ export const CourseCard = ({ enrollment, index, isLoading, variant = 'dashboard'
                 "group flex flex-col shadow-sm rounded-[24px] overflow-hidden transition-shadow duration-300",
                 "border bg-white border-neutral-200/80 ring-1 ring-black/[0.02]",
                 "dark:bg-white/[0.03] dark:border-white/[0.07] dark:ring-white/[0.04]",
-                variant !== 'available' ? "cursor-pointer hover:shadow-md" : "cursor-default"
+                variant !== 'available' ? "hover:shadow-md" : ""
               )}
-              onClick={() => variant !== 'available' && setIsFlipped(true)}
             >
               {/* Thumbnail/Icon Area — soft tint in light, dark gradient + accent glow in dark */}
               <div className={cn(
-                "relative flex justify-center items-center w-full aspect-[4/3] overflow-hidden transition-colors duration-300",
+                "relative flex justify-center items-center w-full aspect-[16/9] overflow-hidden transition-colors duration-300",
                 theme.bannerLight,
                 "dark:bg-[#17171a] dark:bg-gradient-to-br", theme.bannerDark
               )}>
@@ -227,13 +226,21 @@ export const CourseCard = ({ enrollment, index, isLoading, variant = 'dashboard'
                 {enrollment.hasNewItemsAfterCompletion && (
                   <Badge className="top-4 right-4 absolute bg-yellow-400 border-0 text-yellow-900">New Content</Badge>
                 )}
-                <div className="top-4 left-4 absolute bg-white/20 opacity-0 group-hover:opacity-100 backdrop-blur-sm p-2 rounded-full transition-opacity">
-                  <Info className="w-4 h-4 text-white" />
-                </div>
+                {variant !== 'available' && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setIsFlipped(true); }}
+                    aria-label="View course details"
+                    title="More details"
+                    className="top-3 left-3 absolute bg-black/30 hover:bg-black/50 backdrop-blur-sm p-2 rounded-full text-white transition-colors focus:outline-none focus:ring-2 focus:ring-white/40"
+                  >
+                    <Info className="w-4 h-4" />
+                  </button>
+                )}
               </div>
 
-              <CardContent className="flex flex-col p-6 pb-10">
-                <div className="flex flex-wrap items-center gap-2 mb-4">
+              <CardContent className="flex flex-col p-5 pb-6">
+                <div className="flex flex-wrap items-center gap-2 mb-3">
                   <Badge variant="secondary" className="bg-[#F1F5F9] dark:bg-slate-800 px-3 border-0 font-medium text-[#64748B] dark:text-slate-400">Course</Badge>
                   {enrollment.cohortName && (
                     <Badge variant="outline" className="dark:bg-primary/10 px-3 border-primary/30 dark:border-blue-400/30 font-medium text-primary dark:text-blue-400">
@@ -244,13 +251,13 @@ export const CourseCard = ({ enrollment, index, isLoading, variant = 'dashboard'
                 </div>
 
                 <h3
-                  className="mb-1 min-h-[3.25rem] font-bold text-foreground text-xl break-words line-clamp-2 leading-tight"
+                  className="mb-1 min-h-[2.75rem] font-bold text-foreground text-lg break-words line-clamp-2 leading-tight"
                   title={enrollment?.course?.name || `Course ${index + 1}`}
                 >
                   {enrollment?.course?.name || `Course ${index + 1}`}
                 </h3>
                 <p
-                  className="mb-6 min-h-[1.25rem] text-muted-foreground text-sm break-words line-clamp-1"
+                  className="mb-4 min-h-[1.25rem] text-muted-foreground text-sm break-words line-clamp-1"
                   title={instructorName || enrollment?.course?.description || "Accelerate your learning journey"}
                 >
                   {instructorName || enrollment?.course?.description || "Accelerate your learning journey"}
@@ -283,7 +290,7 @@ export const CourseCard = ({ enrollment, index, isLoading, variant = 'dashboard'
                       <Button
                         onClick={(e) => { e.stopPropagation(); handleContinue(); }}
                         className={cn(
-                          "flex flex-1 justify-center items-center gap-2 shadow-md rounded-xl h-12 font-bold text-base active:scale-95 transition-all duration-300",
+                          "flex flex-1 justify-center items-center gap-2 shadow-md rounded-xl h-10 font-bold text-sm active:scale-95 transition-all duration-300",
                           variant === 'available' ? "bg-primary text-primary-foreground" : isStart ? "bg-[#22C55E] text-white" : "bg-primary text-primary-foreground hover:bg-primary/90"
                         )}
                       >
@@ -304,8 +311,8 @@ export const CourseCard = ({ enrollment, index, isLoading, variant = 'dashboard'
                         <div onClick={(e) => e.stopPropagation()}>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="outline" size="icon" className="border-2 rounded-xl w-12 h-12" aria-label="More course actions">
-                                <MoreHorizontal className="w-5 h-5" />
+                              <Button variant="outline" size="icon" className="border-2 rounded-xl w-10 h-10" aria-label="More course actions">
+                                <MoreHorizontal className="w-4 h-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48">
