@@ -35,7 +35,7 @@ export const StatCard = ({ icon, value, label, sublabel, tone = "amber", decorat
         // Light: clean white surface. Dark: soft glassy gray (not black).
         "bg-white border-neutral-200/80 dark:bg-white/[0.035] dark:border-white/[0.07]",
         "ring-1 ring-black/[0.02] dark:ring-white/[0.04] shadow-sm",
-        "transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg dark:hover:bg-white/[0.06]",
+        "transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-lg dark:hover:bg-white/[0.06]",
         className
       )}
     >

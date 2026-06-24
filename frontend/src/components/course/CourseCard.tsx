@@ -200,7 +200,7 @@ export const CourseCard = ({ enrollment, index, isLoading, variant = 'dashboard'
     const theme = themes[index % themes.length];
 
     return (
-      <div className={cn("transition-all hover:-translate-y-1 duration-300 [perspective:1000px]", className)}>
+      <div className={cn("transition-all hover:-translate-y-1 duration-300 ease-out [perspective:1000px]", className)}>
         <div className={cn("relative w-full transition-all duration-700 [transform-style:preserve-3d]", isFlipped && "[transform:rotateY(180deg)]")}>
           {/* Front Side - Determines the height */}
           <div className="relative w-full [backface-visibility:hidden]">

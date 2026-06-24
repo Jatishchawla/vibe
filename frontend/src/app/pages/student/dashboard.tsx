@@ -17,7 +17,7 @@ import { CourseCard } from "@/components/course/CourseCard";
 import { CourseListCard } from "@/components/course/CourseListCard";
 import { FollowUpInvitesBanner } from "@/components/course/FollowUpInvitesBanner";
 import { NewAnnouncementsPopup } from "@/components/announcements/NewAnnouncementsPopup";
-import { BookOpen, Clock, Target, GraduationCap, LayoutGrid, List } from "lucide-react";
+import { BookOpen, Target, GraduationCap, LayoutGrid, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -149,8 +149,8 @@ function DashboardContent() {
     isLoading: publicCoursesLoading
   } = usePublicCourses(1, 5, !!token);
 
-  // Total watch time (seconds) — used to surface "Hours Invested".
-  const { data: watchTimeSeconds, isLoading: watchTimeLoading } = useWatchtimeTotal();
+  // Keep the watch-time query warm (preserves original prefetch behaviour); not displayed.
+  useWatchtimeTotal();
   const { data: statsData, isLoading: statsLoading } = useUserEnrollmentStats(!!token);
 
 
@@ -164,14 +164,6 @@ function DashboardContent() {
   }, [enrollments]);
 
   const totalProgress = statsData?.overallProgress ?? 0;
-
-  // Derive a friendly "hours invested" figure from the raw watch-time seconds.
-  const watchHours = (watchTimeSeconds ?? 0) / 3600;
-  const hoursDisplay = watchHours <= 0
-    ? "0"
-    : watchHours < 10
-      ? `${Math.round(watchHours * 10) / 10}`
-      : `${Math.round(watchHours)}`;
 
   const enrolledCount = statsData?.totalCourses ?? totalEnrollments;
   const completedCount = statsData?.completedCourses ?? completedEnrollments.length;
@@ -242,7 +234,7 @@ function DashboardContent() {
                 </p>
               </div>
 
-              <div className="relative mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="relative mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <StatCard
                   tone="amber"
                   icon={<BookOpen className="h-5 w-5" />}
@@ -250,14 +242,6 @@ function DashboardContent() {
                   label="Enrolled Courses"
                   sublabel="In your catalog"
                   decoration="📚"
-                />
-                <StatCard
-                  tone="blue"
-                  icon={<Clock className="h-5 w-5" />}
-                  value={watchTimeLoading ? "—" : hoursDisplay}
-                  label="Hours Invested"
-                  sublabel="Total learning time"
-                  decoration="⏱️"
                 />
                 <StatCard
                   tone="emerald"

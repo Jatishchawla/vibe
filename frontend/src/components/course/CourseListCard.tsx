@@ -105,7 +105,7 @@ export const CourseListCard = ({ enrollment, index, isLoading: _isLoading, varia
   return (
     <Card
       className={cn(
-        "group relative flex flex-col gap-3 rounded-2xl border p-4 transition-all duration-300 sm:flex-row sm:items-center sm:gap-4",
+        "group relative flex flex-col gap-3 rounded-2xl border p-4 transition-all duration-300 ease-out sm:flex-row sm:items-center sm:gap-4",
         "bg-white border-neutral-200/80 hover:border-neutral-300 hover:shadow-md",
         "dark:bg-white/[0.03] dark:border-white/[0.07] dark:hover:bg-white/[0.05]",
         "ring-1 ring-black/[0.02] dark:ring-white/[0.04]",

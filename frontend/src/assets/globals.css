@@ -157,6 +157,12 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Smoother in-page scrolling (respects reduced-motion preferences) */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
   .card, .popover, .student-course-card {
     background-color: hsl(var(--card));
     color: hsl(var(--card-foreground));
