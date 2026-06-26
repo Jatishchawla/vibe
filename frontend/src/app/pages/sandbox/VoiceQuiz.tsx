@@ -71,6 +71,7 @@ export default function VoiceQuiz() {
   const mimeRef = useRef<string | undefined>(undefined);
   const inFlightRef = useRef(false); // one live request at a time
   const stoppedRef = useRef(false); // ignore late partials after stop
+  const answerRef = useRef(""); // latest transcript (for the final-pass fallback)
 
   const words = QUESTION.split(/\s+/);
   const wordCount = answer.trim() ? answer.trim().split(/\s+/).length : 0;
@@ -150,7 +151,10 @@ export default function VoiceQuiz() {
     try {
       const blob = new Blob(chunksRef.current, { type: mimeRef.current || "audio/webm" });
       const text = await postAudio(blob);
-      if (!stoppedRef.current) setAnswer(text);
+      if (!stoppedRef.current) {
+        answerRef.current = text;
+        setAnswer(text);
+      }
     } catch {
       /* ignore transient partial errors — the final pass reports problems */
     } finally {
@@ -158,19 +162,31 @@ export default function VoiceQuiz() {
     }
   };
 
-  // Final authoritative transcript when the user stops.
+  // Final authoritative transcript when the user stops. Retries once; if it still
+  // fails but the live pass already captured an answer, keep that (no scary error).
   const transcribeFinal = async (blob: Blob) => {
     setTranscribing(true);
     setSttError(null);
-    try {
-      setAnswer(await postAudio(blob));
-    } catch {
-      setSttError(
-        "Couldn't transcribe. Make sure the STT proxy is running on :8089 with a Groq key in its .env.",
-      );
-    } finally {
-      setTranscribing(false);
+    let lastErr = "";
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const text = await postAudio(blob);
+        answerRef.current = text;
+        setAnswer(text);
+        setTranscribing(false);
+        return;
+      } catch (e) {
+        lastErr = e instanceof Error ? e.message : String(e);
+        if (attempt === 0) await new Promise((r) => setTimeout(r, 700));
+      }
     }
+    setTranscribing(false);
+    if (answerRef.current.trim()) return; // live transcript already has the answer
+    setSttError(
+      lastErr.includes("429")
+        ? "Groq is briefly rate-limiting — wait a few seconds and press Re-record."
+        : "Couldn't transcribe. Make sure the STT proxy is running on :8089 with a Groq key in its .env.",
+    );
   };
 
   const startRecording = async () => {
@@ -178,6 +194,7 @@ export default function VoiceQuiz() {
     setSeconds(0);
     stoppedRef.current = false;
     inFlightRef.current = false;
+    answerRef.current = "";
     try {
       streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mimeType = pickMimeType();
