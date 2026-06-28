@@ -154,27 +154,30 @@ export function StudentSidebar() {
 
             {/* Actions row: notifications, theme + logout, right-aligned */}
             <SidebarMenuItem>
-              <div className="flex items-center justify-end gap-1 px-1 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-center">
-                <StudentNotifications compact />
-                <button
-                  type="button"
-                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                  aria-label="Toggle theme"
-                  title="Toggle theme"
-                  className={`flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground ${yellowItem}`}
-                >
-                  <Sun className="size-4 dark:hidden" />
-                  <Moon className="hidden size-4 dark:block" />
-                </button>
+              <div className="flex items-center gap-1 px-1 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-center">
                 <button
                   type="button"
                   onClick={() => setConfirmLogout(true)}
-                  aria-label="Logout"
                   title="Logout"
-                  className="flex size-7 shrink-0 items-center justify-center rounded-md bg-red-50 text-red-600 transition-colors hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
+                  className="flex h-7 items-center gap-2 rounded-md bg-red-50 px-3 text-sm font-medium text-red-600 transition-colors hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20 group-data-[collapsible=icon]:size-7 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
                 >
                   <LogOut className="size-4" />
+                  <span className="group-data-[collapsible=icon]:hidden">Logout</span>
                 </button>
+
+                <div className="ml-auto flex items-center gap-1 group-data-[collapsible=icon]:ml-0">
+                  <StudentNotifications compact />
+                  <button
+                    type="button"
+                    onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                    aria-label="Toggle theme"
+                    title="Toggle theme"
+                    className={`flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground ${yellowItem}`}
+                  >
+                    <Sun className="size-4 dark:hidden" />
+                    <Moon className="hidden size-4 dark:block" />
+                  </button>
+                </div>
               </div>
             </SidebarMenuItem>
           </SidebarMenu>
