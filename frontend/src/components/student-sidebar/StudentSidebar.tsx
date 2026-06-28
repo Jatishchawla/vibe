@@ -161,7 +161,7 @@ export function StudentSidebar() {
                   <span className="group-data-[collapsible=icon]:hidden">Logout</span>
                 </button>
 
-                <div className="ml-auto flex items-center gap-1 group-data-[collapsible=icon]:ml-0">
+                <div className="ml-auto flex items-center gap-1 group-data-[collapsible=icon]:ml-0 group-data-[collapsible=icon]:flex-col">
                   <StudentNotifications compact />
                   <button
                     type="button"
@@ -170,8 +170,8 @@ export function StudentSidebar() {
                     title="Toggle theme"
                     className={`flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground ${yellowItem}`}
                   >
-                    <Sun className="size-4 dark:hidden" />
-                    <Moon className="hidden size-4 dark:block" />
+                    <Sun className="size-5 dark:hidden" />
+                    <Moon className="hidden size-5 dark:block" />
                   </button>
                 </div>
               </div>

@@ -300,6 +300,19 @@ export const CourseCard = ({ enrollment, index, isLoading, variant = 'dashboard'
                         </Button>
                       )}
 
+                      {isTimeslotActive && (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={(e) => { e.stopPropagation(); setIsTimeslotModalOpen(true); }}
+                          className="border-2 rounded-xl w-10 h-10"
+                          aria-label={hasAssignedTimeslot ? 'Time Slot' : 'Book Slot'}
+                          title={hasAssignedTimeslot ? 'Time Slot' : 'Book Slot'}
+                        >
+                          <Clock className="w-4 h-4 text-green-500" />
+                        </Button>
+                      )}
+
                       {variant !== 'available' && isNotGuruSetu && (
                         <div onClick={(e) => e.stopPropagation()}>
                           <DropdownMenu>
@@ -317,11 +330,6 @@ export const CourseCard = ({ enrollment, index, isLoading, variant = 'dashboard'
                               {isHpSystem && (
                                 <DropdownMenuItem onClick={() => navigate({ to: `/student/hp-system/${versionId}/${enrollment.cohortName || 'default'}/activities` })}>
                                   <Activity className="mr-2 w-4 h-4 text-blue-500" /> HP System
-                                </DropdownMenuItem>
-                              )}
-                              {isTimeslotActive && (
-                                <DropdownMenuItem onClick={() => setIsTimeslotModalOpen(true)}>
-                                  <Clock className="mr-2 w-4 h-4 text-green-500" /> {hasAssignedTimeslot ? 'Time Slot' : 'Pick Slot'}
                                 </DropdownMenuItem>
                               )}
                               <DropdownMenuItem onClick={() => setIsDetailsOpen(true)}>
