@@ -22,7 +22,7 @@ export default function StudentLayout() {
           <SidebarTrigger className="-ml-1" />
         </header>
 
-        <main className="relative flex flex-1 flex-col p-6 pt-0">
+        <main className="relative flex flex-1 flex-col p-4 md:p-6">
           <div className="relative z-10 h-full">
             <Outlet />
           </div>

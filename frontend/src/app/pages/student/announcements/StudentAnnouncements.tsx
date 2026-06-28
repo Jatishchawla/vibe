@@ -2,7 +2,7 @@ import { AnnouncementList } from "@/components/announcements/AnnouncementList";
 
 export default function StudentAnnouncements() {
     return (
-        <div className="flex-1 md:p-6 p-3 bg-gradient-to-br from-background via-background to-muted/20">
+        <div className="flex-1 bg-gradient-to-br from-background via-background to-muted/20">
             <div className="max-w-6xl mx-auto space-y-8 min-w-0">
                 {/* Header Section */}
                 <div className="relative">

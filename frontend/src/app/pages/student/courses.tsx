@@ -119,7 +119,7 @@ export default function StudentCourses() {
   // Add authentication check at the beginning of the render
   if (!isAuthenticated) {
     return (
-      <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+      <div className="flex flex-1 flex-col gap-4">
         <EmptyState
           title="Authentication Required"
           description="Please log in to view your courses"
@@ -132,7 +132,7 @@ export default function StudentCourses() {
 
   if (error) {
     return (
-      <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+      <div className="flex flex-1 flex-col gap-4">
         <EmptyState
           title="Error loading courses"
           description={typeof error === 'string' ? error : "Failed to load your courses"}
@@ -145,7 +145,7 @@ export default function StudentCourses() {
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-4 md:px-4 px-0 p-4 pt-0">
+    <div className="flex flex-1 flex-col gap-4">
       <div className="flex flex-col space-y-6">
         <section className="flex items-start justify-between gap-4">
           <div className="flex flex-col space-y-2">

@@ -687,8 +687,8 @@ export default function CourseIssueReports() {
 
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto py-4 space-y-8">
+    <div className="bg-background">
+      <div className="container mx-auto space-y-8">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           <div className="space-y-4">
             <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
