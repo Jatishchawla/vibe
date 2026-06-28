@@ -71,12 +71,12 @@ export function StudentSidebar() {
 
       <Sidebar collapsible="icon" variant="sidebar" className="border-r bg-white dark:bg-[#17171a] [&_[data-sidebar=sidebar]]:bg-white dark:[&_[data-sidebar=sidebar]]:bg-[#17171a]">
         <SidebarHeader className="px-2 py-4">
-          <div className="flex items-center gap-2">
-            <Link to="/student" className="flex items-center gap-3 pl-1 group-data-[collapsible=icon]:hidden">
+          <div className="flex items-center gap-2 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:gap-1">
+            <Link to="/student" className="flex items-center gap-3 pl-1 group-data-[collapsible=icon]:pl-0">
               <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg">
                 <img src={logo} alt="Vibe Logo" className="h-9 w-9 object-contain" />
               </div>
-              <span className="text-2xl font-bold">
+              <span className="text-2xl font-bold group-data-[collapsible=icon]:hidden">
                 <AuroraText colors={["#A07CFE", "#FE8FB5", "#FFBE7B"]}><b>ViBe</b></AuroraText>
               </span>
             </Link>
