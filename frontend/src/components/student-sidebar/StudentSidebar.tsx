@@ -148,23 +148,23 @@ export function StudentSidebar() {
                 >
                   <Settings className="size-4" />
                 </Link>
-
-                <div className="flex items-center gap-0.5 group-data-[collapsible=icon]:hidden">
-                  <StudentNotifications compact />
-                  <ThemeToggle />
-                </div>
               </div>
             </SidebarMenuItem>
 
+            {/* Actions row: notifications, theme + logout together */}
             <SidebarMenuItem>
-              <button
-                onClick={() => setConfirmLogout(true)}
-                title="Logout"
-                className="mx-auto mt-1 flex h-8 items-center gap-2 rounded-md bg-red-50 px-4 text-sm font-medium text-red-600 transition-colors hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:justify-center"
-              >
-                <LogOut className="size-4" />
-                <span className="group-data-[collapsible=icon]:hidden">Logout</span>
-              </button>
+              <div className="flex items-center gap-1 px-1 group-data-[collapsible=icon]:flex-col">
+                <StudentNotifications compact />
+                <ThemeToggle />
+                <button
+                  onClick={() => setConfirmLogout(true)}
+                  title="Logout"
+                  className="ml-auto flex h-8 items-center gap-2 rounded-md bg-red-50 px-3 text-sm font-medium text-red-600 transition-colors hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20 group-data-[collapsible=icon]:ml-0 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+                >
+                  <LogOut className="size-4" />
+                  <span className="group-data-[collapsible=icon]:hidden">Logout</span>
+                </button>
+              </div>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>
