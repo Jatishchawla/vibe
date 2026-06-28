@@ -30,14 +30,14 @@ export default function StudentCourses() {
   // View Mode State (Persisted)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('student_dashboard_view_mode');
-      return (saved === 'list' ? 'list' : 'grid') as 'grid' | 'list';
+      const saved = localStorage.getItem('student_courses_view_mode');
+      return (saved === 'grid' ? 'grid' : 'list') as 'grid' | 'list';
     }
-    return 'grid';
+    return 'list';
   });
 
   useEffect(() => {
-    localStorage.setItem('student_dashboard_view_mode', viewMode);
+    localStorage.setItem('student_courses_view_mode', viewMode);
   }, [viewMode]);
 
   useEffect(() => {

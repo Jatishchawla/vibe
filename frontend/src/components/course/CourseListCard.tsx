@@ -1,9 +1,8 @@
-import { Clock, Info, Play, Trophy, Headphones, MessageCircle, ExternalLink, Check, Copy, Mail, Activity, MoreHorizontal, BookOpen } from "lucide-react";
+import { Clock, Info, Play, Trophy, Headphones, MessageCircle, ExternalLink, Check, Copy, Mail, Activity, BookOpen } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useCourseVersionById, useLeaderboard, useCheckTimeSlotAccessOnDemand } from "@/hooks/hooks";
 import { toast } from "sonner";
 import { useCourseStore } from "@/store/course-store";
@@ -179,50 +178,52 @@ export const CourseListCard = ({ enrollment, index, isLoading: _isLoading, varia
         </Button>
 
         {hasMenu && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl" aria-label="More course actions">
-                <MoreHorizontal className="h-4 w-4" />
+          <>
+            {/* Book Slot — kept labeled */}
+            <Button
+              variant="outline"
+              onClick={() => setIsTimeslotModalOpen(true)}
+              className="h-9 gap-1.5 rounded-xl font-semibold"
+              title={hasAssignedTimeslot ? 'Time Slot' : 'Book Slot'}
+            >
+              <Clock className="h-4 w-4 text-green-500" />
+              <span className="hidden sm:inline">{hasAssignedTimeslot ? 'Time Slot' : 'Book Slot'}</span>
+            </Button>
+
+            {/* Remaining actions as icon-only buttons */}
+            <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl" onClick={() => setIsDetailsOpen(true)} title="Details" aria-label="Details">
+              <Info className="h-4 w-4 text-blue-500" />
+            </Button>
+            {hpSystem && (
+              <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl" onClick={() => navigate({ to: `/student/hp-system/${versionId}/${enrollment.cohortName || 'default'}/activities` })} title="HP System" aria-label="HP System">
+                <Activity className="h-4 w-4 text-blue-500" />
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => setIsDetailsOpen(true)}>
-                <Info className="mr-2 h-4 w-4 text-blue-500" /> Details
-              </DropdownMenuItem>
-              {hpSystem && (
-                <DropdownMenuItem onClick={() => navigate({ to: `/student/hp-system/${versionId}/${enrollment.cohortName || 'default'}/activities` })}>
-                  <Activity className="mr-2 h-4 w-4 text-blue-500" /> HP System
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuItem onClick={() => setIsTimeslotModalOpen(true)}>
-                <Clock className="mr-2 h-4 w-4 text-green-500" /> {hasAssignedTimeslot ? 'Time Slot' : 'Pick Slot'}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setIsLeaderboardOpen(true)}>
-                <Trophy className="mr-2 h-4 w-4 text-yellow-500" /> Leaderboard
-              </DropdownMenuItem>
-              {supportLink && (
-                <DropdownMenuItem asChild>
-                  <a
-                    href={supportLink.startsWith('mailto:') || supportLink.includes('@') ? (supportLink.startsWith('mailto:') ? supportLink : `mailto:${supportLink}`) : supportLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Headphones className="mr-2 h-4 w-4 text-indigo-500" /> Support
-                  </a>
-                </DropdownMenuItem>
-              )}
-              {enrollment.courseId === MERN_CASE_STUDY_ID && (
-                <DropdownMenuItem onClick={() => setIsForumOpen(true)}>
-                  <MessageCircle className="mr-2 h-4 w-4 text-blue-500" /> Forum
-                </DropdownMenuItem>
-              )}
-              {!supportLink && (enrollment.courseId === "6943b2cafa4e840eb39490b6" || enrollment.courseId === MERN_CASE_STUDY_ID) && (
-                <DropdownMenuItem onClick={() => setIsSupportOpen(true)}>
-                  <Mail className="mr-2 h-4 w-4 text-indigo-500" /> Support
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            )}
+            <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl" onClick={() => setIsLeaderboardOpen(true)} title="Leaderboard" aria-label="Leaderboard">
+              <Trophy className="h-4 w-4 text-yellow-500" />
+            </Button>
+            {supportLink && (
+              <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl" asChild title="Support" aria-label="Support">
+                <a
+                  href={supportLink.startsWith('mailto:') || supportLink.includes('@') ? (supportLink.startsWith('mailto:') ? supportLink : `mailto:${supportLink}`) : supportLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Headphones className="h-4 w-4 text-indigo-500" />
+                </a>
+              </Button>
+            )}
+            {enrollment.courseId === MERN_CASE_STUDY_ID && (
+              <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl" onClick={() => setIsForumOpen(true)} title="Forum" aria-label="Forum">
+                <MessageCircle className="h-4 w-4 text-blue-500" />
+              </Button>
+            )}
+            {!supportLink && (enrollment.courseId === "6943b2cafa4e840eb39490b6" || enrollment.courseId === MERN_CASE_STUDY_ID) && (
+              <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl" onClick={() => setIsSupportOpen(true)} title="Support" aria-label="Support">
+                <Mail className="h-4 w-4 text-indigo-500" />
+              </Button>
+            )}
+          </>
         )}
       </div>
 
