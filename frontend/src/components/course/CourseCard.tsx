@@ -223,20 +223,20 @@ export const CourseCard = ({ enrollment, index, isLoading, variant = 'dashboard'
                   {theme.iconComponent}
                 </div>
                 {enrollment.hasNewItemsAfterCompletion && (
-                  <Badge className="top-4 right-4 absolute bg-yellow-400 border-0 text-yellow-900">New Content</Badge>
+                  <Badge className="top-3 right-3 absolute bg-yellow-400 border-0 text-yellow-900">New Content</Badge>
                 )}
-              </div>
-
-              <CardContent className="flex flex-col p-4">
-                <div className="flex flex-wrap items-center gap-2 mb-2.5 empty:mb-0">
+                {/* Tags overlaid on top of the thumbnail */}
+                <div className="top-3 left-3 absolute flex flex-wrap items-center gap-1.5">
                   {enrollment.cohortName && (
-                    <Badge variant="outline" className="dark:bg-primary/10 px-3 border-primary/30 dark:border-blue-400/30 font-medium text-primary dark:text-blue-400">
+                    <Badge variant="outline" className="bg-white/90 dark:bg-black/40 backdrop-blur-sm px-2.5 border-primary/30 dark:border-blue-400/30 font-medium text-primary dark:text-blue-300">
                       {enrollment.cohortName}
                     </Badge>
                   )}
-                  {isCompleted && <Badge className="bg-green-100 dark:bg-green-900/30 border-0 font-medium text-green-700 dark:text-green-400">Completed</Badge>}
+                  {isCompleted && <Badge className="bg-green-100 dark:bg-green-900/40 border-0 font-medium text-green-700 dark:text-green-400">Completed</Badge>}
                 </div>
+              </div>
 
+              <CardContent className="flex flex-col p-4">
                 <h3
                   className="mb-1 min-h-[2.75rem] font-bold text-foreground text-lg break-words line-clamp-2 leading-tight"
                   title={enrollment?.course?.name || `Course ${index + 1}`}
