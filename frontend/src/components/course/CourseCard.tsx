@@ -305,9 +305,10 @@ export const CourseCard = ({ enrollment, index, isLoading, variant = 'dashboard'
                           variant="outline"
                           size="icon"
                           onClick={(e) => { e.stopPropagation(); setIsTimeslotModalOpen(true); }}
+                          disabled={!hasAssignedTimeslot}
                           className="border-2 rounded-xl w-10 h-10"
-                          aria-label={hasAssignedTimeslot ? 'Slot' : 'Pick Slot'}
-                          title={hasAssignedTimeslot ? 'Slot' : 'Pick Slot'}
+                          aria-label="Pick Slot"
+                          title="Pick Slot"
                         >
                           <Clock className="w-4 h-4 text-green-500" />
                         </Button>
