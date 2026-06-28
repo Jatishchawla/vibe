@@ -225,6 +225,7 @@ function DashboardContent() {
             />
 
             <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full space-y-6">
+              <div className="flex items-center justify-between gap-3">
               <TabsList className="w-full md:w-fit flex h-auto p-1 bg-slate-100/80 dark:bg-white/[0.04] rounded-full border border-slate-200/50 dark:border-white/[0.07] overflow-x-auto scrollbar-hide">
                 <TabsTrigger
                   value="available"
@@ -260,15 +261,10 @@ function DashboardContent() {
                   )}
                 </TabsTrigger>
               </TabsList>
+              <ViewSwitcher viewMode={viewMode} setViewMode={setViewMode} />
+              </div>
 
               <TabsContent value="available" className="mt-6 space-y-4 animate-in fade-in-50 duration-300 slide-in-from-left-2">
-                <div className="flex items-center justify-between gap-3 mb-2">
-                  <div className="min-w-0">
-                    <h2 className="text-2xl font-bold tracking-tight">Recommended for you</h2>
-                    <p className="text-sm text-muted-foreground">Hand-picked courses to start next</p>
-                  </div>
-                  <ViewSwitcher viewMode={viewMode} setViewMode={setViewMode} />
-                </div>
                 <CourseSection
                   title=""
                   viewMode={viewMode}
@@ -299,16 +295,6 @@ function DashboardContent() {
 
               <TabsContent value="enrolled" className="mt-6 space-y-4 animate-in fade-in-50 duration-300 slide-in-from-left-2">
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <h2 className="text-2xl font-bold tracking-tight">Active Courses</h2>
-                      <p className="text-sm text-muted-foreground">
-                        {activeEnrollments.length} in progress &bull; {completedEnrollments.length} completed
-                      </p>
-                    </div>
-                    <ViewSwitcher viewMode={viewMode} setViewMode={setViewMode} />
-                  </div>
-
                   {enrollmentsLoading ? (
                     <div className={cn(
                       "grid gap-6",
@@ -359,14 +345,6 @@ function DashboardContent() {
 
               <TabsContent value="completed" className="mt-6 space-y-4 animate-in fade-in-50 duration-300 slide-in-from-left-2">
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <h2 className="text-2xl font-bold tracking-tight">Completed Courses</h2>
-                      <p className="text-sm text-muted-foreground">Your finished learning &amp; certificates</p>
-                    </div>
-                    <ViewSwitcher viewMode={viewMode} setViewMode={setViewMode} />
-                  </div>
-
                   {enrollmentsLoading ? (
                     <div className={cn(
                       "grid gap-6",
