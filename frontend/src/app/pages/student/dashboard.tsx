@@ -255,7 +255,6 @@ function DashboardContent() {
             {/* Personalized "next best action" + at-a-glance insights, derived
                 from data already fetched above (read-only). */}
             <LearningInsights
-              stats={statsData}
               activeEnrollments={activeEnrollments}
               isLoading={statsLoading || enrollmentsLoading}
               onBrowse={() => navigate({ to: '/student/courses' })}

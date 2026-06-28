@@ -1,14 +1,12 @@
 import { useMemo } from "react";
-import { Sparkles, Target, CheckCircle2, BookOpen, ArrowRight, Flame } from "lucide-react";
+import { Sparkles, Target, BookOpen, ArrowRight, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/utils";
 import type { CourseCardProps } from "@/types/course.types";
-import type { UserEnrollmentStats } from "@/hooks/hooks";
 
 type Enrollment = CourseCardProps["enrollment"];
 
 interface LearningInsightsProps {
-  stats?: UserEnrollmentStats;
   /** Active (not-yet-completed) enrollments, as already computed by the dashboard. */
   activeEnrollments: Enrollment[];
   isLoading?: boolean;
@@ -41,7 +39,6 @@ function progressOf(e: Enrollment): number {
  * one exists, else continue the most-progressed one, else browse the catalog.
  */
 export function LearningInsights({
-  stats,
   activeEnrollments,
   isLoading,
   onBrowse,
@@ -54,11 +51,6 @@ export function LearningInsights({
         .sort((a, b) => b.progress - a.progress),
     [activeEnrollments],
   );
-
-  const overallProgress = Math.max(0, Math.min(100, Math.round(stats?.overallProgress ?? 0)));
-  const completedItems = stats?.completedItems ?? 0;
-  const totalItems = stats?.totalItems ?? 0;
-  const activeCount = ranked.length;
 
   // The single highest-value next step, chosen by a transparent rule.
   const recommendation = useMemo(() => {
@@ -146,28 +138,6 @@ export function LearningInsights({
         </div>
       </div>
 
-      {/* At-a-glance metrics derived from clearly-defined stats */}
-      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <MetricChip
-          icon={<Target className="h-4 w-4" />}
-          tone="emerald"
-          value={`${overallProgress}%`}
-          label="Overall progress"
-        />
-        <MetricChip
-          icon={<CheckCircle2 className="h-4 w-4" />}
-          tone="blue"
-          value={`${completedItems} / ${totalItems}`}
-          label="Lessons completed"
-        />
-        <MetricChip
-          icon={<BookOpen className="h-4 w-4" />}
-          tone="violet"
-          value={`${activeCount}`}
-          label={activeCount === 1 ? "Course in progress" : "Courses in progress"}
-        />
-      </div>
-
       {/* Closest to finishing — a gentle nudge toward easy wins */}
       {ranked.some((c) => c.progress >= ALMOST_DONE_THRESHOLD && c.progress < 100) && (
         <div className="mt-4">
@@ -197,32 +167,3 @@ export function LearningInsights({
   );
 }
 
-const CHIP_TONES = {
-  emerald: "bg-emerald-500/10 text-emerald-600 ring-emerald-500/20 dark:text-emerald-400 dark:ring-emerald-400/20",
-  blue: "bg-blue-500/10 text-blue-600 ring-blue-500/20 dark:text-blue-400 dark:ring-blue-400/20",
-  violet: "bg-violet-500/10 text-violet-600 ring-violet-500/20 dark:text-violet-400 dark:ring-violet-400/20",
-} as const;
-
-function MetricChip({
-  icon,
-  value,
-  label,
-  tone,
-}: {
-  icon: React.ReactNode;
-  value: string;
-  label: string;
-  tone: keyof typeof CHIP_TONES;
-}) {
-  return (
-    <div className="flex items-center gap-3 rounded-2xl border border-neutral-200/70 bg-neutral-50/50 px-4 py-3 dark:border-white/[0.06] dark:bg-white/[0.025]">
-      <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1", CHIP_TONES[tone])}>
-        {icon}
-      </span>
-      <div className="min-w-0">
-        <p className="text-lg font-bold leading-tight tabular-nums text-foreground">{value}</p>
-        <p className="truncate text-xs text-muted-foreground">{label}</p>
-      </div>
-    </div>
-  );
-}
