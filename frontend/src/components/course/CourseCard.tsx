@@ -20,6 +20,7 @@ import { StudentPolicyModal } from "@/app/pages/student/components/policies/Stud
 
 
 import { EnrollmentDetailsDialog } from "@/components/course/EnrollmentDetailsDialog";
+import { CourseQuickDetailsDialog } from "@/components/course/CourseQuickDetailsDialog";
 import { Pagination } from "../ui/Pagination";
 import { LeaderboardLeagues } from "@/components/course/LeaderboardLeagues";
 
@@ -57,7 +58,7 @@ export const CourseCard = ({ enrollment, index, isLoading, variant = 'dashboard'
   const { setCurrentCourse } = useCourseStore();
   const navigate = useNavigate();
   const { check: checkTimeSlotAccess } = useCheckTimeSlotAccessOnDemand();
-  const [isFlipped, setIsFlipped] = useState(false);
+  const [isQuickOpen, setIsQuickOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isTimeslotModalOpen, setIsTimeslotModalOpen] = useState(false);
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
@@ -199,11 +200,14 @@ export const CourseCard = ({ enrollment, index, isLoading, variant = 'dashboard'
     ];
     const theme = themes[index % themes.length];
 
+    const continueLabel = variant === 'available' ? 'Register Now' : isStart ? 'Start Course' : isCompleted ? 'View Course' : 'Continue Learning';
+    const versionLabel = courseVersionData?.version || courseVersionData?.name || versionId.substring(0, 8);
+
     return (
-      <div className={cn("transition-all hover:-translate-y-1 duration-300 ease-out [perspective:1000px]", className)}>
-        <div className={cn("relative w-full transition-all duration-700 [transform-style:preserve-3d]", isFlipped && "[transform:rotateY(180deg)]")}>
-          {/* Front Side - Determines the height */}
-          <div className="relative w-full [backface-visibility:hidden]">
+      <div className={cn("transition-all hover:-translate-y-1 duration-300 ease-out", className)}>
+        <div className="relative w-full">
+          {/* Card content */}
+          <div className="relative w-full">
             <Card
               className={cn(
                 "group flex flex-col shadow-sm rounded-[24px] overflow-hidden transition-shadow duration-300",
@@ -214,7 +218,7 @@ export const CourseCard = ({ enrollment, index, isLoading, variant = 'dashboard'
             >
               {/* Thumbnail/Icon Area — soft tint in light, dark gradient + accent glow in dark */}
               <div className={cn(
-                "relative flex justify-center items-center w-full aspect-[16/9] overflow-hidden transition-colors duration-300",
+                "relative flex justify-center items-center w-full aspect-video overflow-hidden transition-colors duration-300",
                 theme.bannerLight,
                 "dark:bg-[#17171a] dark:bg-gradient-to-br", theme.bannerDark
               )}>
@@ -229,7 +233,7 @@ export const CourseCard = ({ enrollment, index, isLoading, variant = 'dashboard'
                 {variant !== 'available' && (
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); setIsFlipped(true); }}
+                    onClick={(e) => { e.stopPropagation(); setIsQuickOpen(true); }}
                     aria-label="View course details"
                     title="More details"
                     className="top-3 left-3 absolute bg-black/30 hover:bg-black/50 backdrop-blur-sm p-2 rounded-full text-white transition-colors focus:outline-none focus:ring-2 focus:ring-white/40"
@@ -239,8 +243,8 @@ export const CourseCard = ({ enrollment, index, isLoading, variant = 'dashboard'
                 )}
               </div>
 
-              <CardContent className="flex flex-col p-5 pb-6">
-                <div className="flex flex-wrap items-center gap-2 mb-3">
+              <CardContent className="flex flex-col p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-2.5">
                   <Badge variant="secondary" className="bg-[#F1F5F9] dark:bg-slate-800 px-3 border-0 font-medium text-[#64748B] dark:text-slate-400">Course</Badge>
                   {enrollment.cohortName && (
                     <Badge variant="outline" className="dark:bg-primary/10 px-3 border-primary/30 dark:border-blue-400/30 font-medium text-primary dark:text-blue-400">
@@ -257,7 +261,7 @@ export const CourseCard = ({ enrollment, index, isLoading, variant = 'dashboard'
                   {enrollment?.course?.name || `Course ${index + 1}`}
                 </h3>
                 <p
-                  className="mb-4 min-h-[1.25rem] text-muted-foreground text-sm break-words line-clamp-1"
+                  className="mb-3 min-h-[1.25rem] text-muted-foreground text-sm break-words line-clamp-1"
                   title={instructorName || enrollment?.course?.description || "Accelerate your learning journey"}
                 >
                   {instructorName || enrollment?.course?.description || "Accelerate your learning journey"}
@@ -285,7 +289,7 @@ export const CourseCard = ({ enrollment, index, isLoading, variant = 'dashboard'
                     </div>
                   )}
 
-                  <div className="gap-3 grid grid-cols-1 pt-2">
+                  <div className="gap-3 grid grid-cols-1 pt-1">
                     <div className="flex items-center gap-2">
                       <Button
                         onClick={(e) => { e.stopPropagation(); handleContinue(); }}
@@ -352,135 +356,35 @@ export const CourseCard = ({ enrollment, index, isLoading, variant = 'dashboard'
               </CardContent>
             </Card>
           </div>
-
-          {/* Back Side - Stretches to match front height */}
-          <div className="absolute inset-0 flex flex-col bg-white dark:bg-slate-900 shadow-xl p-6 border-2 border-primary/20 rounded-[24px] w-full h-full cursor-pointer [backface-visibility:hidden] [transform:rotateY(180deg)]" onClick={() => setIsFlipped(false)}>
-            <div className="flex-1 pr-1 overflow-y-auto scrollbar-hide">
-              <div className="flex justify-between items-center mb-4">
-                <Badge className={cn("px-3 py-1 font-bold", theme.bg, theme.icon.replace('text-', 'bg-').replace('[', '').replace(']', '/10'))}>
-                  Course Details
-                </Badge>
-                <div className="bg-slate-100 dark:bg-slate-800 p-2 rounded-full">
-                  <Play className={cn("w-5 h-5", theme.icon)} />
-                </div>
-              </div>
-
-              <h3 className="mb-4 font-bold text-foreground text-lg">{enrollment?.course?.name || `Course ${index + 1}`}</h3>
-
-              <div className="space-y-4 mb-6">
-                <div>
-                  <h4 className="flex items-center gap-1.5 mb-1 font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
-                    <Info className="w-3 h-3" /> Description
-                  </h4>
-                  <p className="text-foreground/80 text-xs line-clamp-4 leading-relaxed">
-                    {enrollment?.course?.description || "No description available for this course. Explore our structured curriculum designed to accelerate your learning journey."}
-                  </p>
-                </div>
-
-                <div className="gap-3 grid grid-cols-1 py-3 border-slate-100 border-y dark:border-slate-800">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="font-medium text-muted-foreground">Version</span>
-                    <span className="font-bold text-foreground">{courseVersionData?.version || courseVersionData?.name || versionId.substring(0, 8)}</span>
-                  </div>
-                  {enrollment.cohortName && (
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="font-medium text-muted-foreground">Cohort</span>
-                      <span className="max-w-[120px] font-bold text-foreground truncate">{enrollment.cohortName}</span>
-                    </div>
-                  )}
-                  {/* Detailed Counts */}
-                  <div className="gap-x-4 gap-y-2 grid grid-cols-2 pt-1">
-                    <div className="flex justify-between items-center text-[11px]">
-                      <span className="text-muted-foreground">Total Items</span>
-                      <span className="font-bold text-foreground">{totalLessons}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-[11px]">
-                      <span className="text-muted-foreground">Modules</span>
-                      <span className="font-bold text-foreground">{moduleCount}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-[11px]">
-                      <span className="text-muted-foreground">Sections</span>
-                      <span className="font-bold text-foreground">{sectionCount}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-[11px]">
-                      <span className="text-muted-foreground">Videos</span>
-                      <span className="font-bold text-foreground">{videoCount}</span>
-                    </div>
-                    {quizCount > 0 && (
-                      <div className="flex justify-between items-center text-[11px]">
-                        <span className="text-muted-foreground">Quizzes</span>
-                        <span className="font-bold text-foreground">{quizCount}</span>
-                      </div>
-                    )}
-                    {articleCount > 0 && (
-                      <div className="flex justify-between items-center text-[11px]">
-                        <span className="text-muted-foreground">Articles</span>
-                        <span className="font-bold text-foreground">{articleCount}</span>
-                      </div>
-                    )}
-                    {projectCount > 0 && (
-                      <div className="flex justify-between items-center text-[11px]">
-                        <span className="text-muted-foreground">Projects</span>
-                        <span className="font-bold text-foreground">{projectCount}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Timeslot Info */}
-                  <div className="flex justify-between items-center mt-1 pt-2 border-slate-50 dark:border-slate-800/50 border-t text-xs">
-                    <span className="flex items-center gap-1 font-medium text-muted-foreground">
-                      <Clock className="w-3 h-3" /> Timeslot
-                    </span>
-                    <span className={cn(
-                      "max-w-[140px] font-bold truncate",
-                      timeSlot ? "text-green-600 dark:text-green-400" : "text-muted-foreground"
-                    )}>
-                      {timeslotStr}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-3 mt-auto pt-4 border-slate-100 dark:border-slate-800 border-t">
-              <div className={cn("gap-3 grid", isTimeslotActive ? "grid-cols-2" : "grid-cols-1")} onClick={(e) => e.stopPropagation()}>
-                {variant !== 'available' && (
-                  <>
-                    <Button
-                      variant="outline"
-                      className="border-2 rounded-lg w-full h-9 font-bold text-[10px]"
-                      onClick={() => setIsDetailsOpen(true)}
-                    >
-                      <Info className="mr-1 w-3.5 h-3.5 text-blue-500" />
-                      Full Details
-                    </Button>
-                    {isTimeslotActive && (
-                      <Button
-                        variant="outline"
-                        className="border-2 rounded-lg w-full h-9 font-bold text-[10px]"
-                        onClick={() => setIsTimeslotModalOpen(true)}
-                      >
-                        <Clock className="mr-1 w-3.5 h-3.5 text-green-500" />
-                        {hasAssignedTimeslot ? 'Timeslot' : 'Pick Slot'}
-                      </Button>
-                    )}
-                  </>
-                )}
-              </div>
-
-              <Button
-                onClick={(e) => { e.stopPropagation(); handleContinue(); }}
-                className={cn(
-                  "flex justify-center items-center gap-2 shadow-md rounded-xl w-full h-10 font-bold text-xs active:scale-95 transition-all duration-300",
-                  variant === 'available' ? "bg-primary text-primary-foreground" : isStart ? "bg-[#22C55E] text-white" : "bg-[#FACC15] text-black"
-                )}
-              >
-                {variant === 'available' ? 'Register Now' : isStart ? 'Start Course' : isCompleted ? 'View Course' : 'Continue Learning'}
-                <ExternalLink className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-          </div>
         </div>
+
+        <CourseQuickDetailsDialog
+          isOpen={isQuickOpen}
+          onOpenChange={setIsQuickOpen}
+          courseName={enrollment?.course?.name || `Course ${index + 1}`}
+          description={enrollment?.course?.description}
+          versionLabel={versionLabel}
+          cohortName={enrollment.cohortName}
+          totalLessons={totalLessons}
+          moduleCount={moduleCount}
+          sectionCount={sectionCount}
+          videoCount={videoCount}
+          quizCount={quizCount}
+          articleCount={articleCount}
+          projectCount={projectCount}
+          timeslotStr={timeslotStr}
+          hasTimeslot={!!timeSlot}
+          theme={{ bg: theme.bg, icon: theme.icon }}
+          variant={variant}
+          isStart={isStart}
+          isCompleted={isCompleted}
+          isTimeslotActive={isTimeslotActive}
+          hasAssignedTimeslot={!!hasAssignedTimeslot}
+          continueLabel={continueLabel}
+          onContinue={() => { setIsQuickOpen(false); handleContinue(); }}
+          onFullDetails={() => { setIsQuickOpen(false); setIsDetailsOpen(true); }}
+          onTimeslot={() => { setIsQuickOpen(false); setIsTimeslotModalOpen(true); }}
+        />
 
         <EnrollmentDetailsDialog
           isOpen={isDetailsOpen}
@@ -678,16 +582,16 @@ export const CourseCardSkeleton = ({ variant }: { variant: string }) => {
   if (variant === 'dashboard' || variant === 'available') {
     return (
       <Card className="flex flex-col bg-white dark:bg-card shadow-sm border-0 rounded-[24px] overflow-hidden animate-pulse">
-        <div className="bg-slate-100 dark:bg-slate-800 w-full aspect-[4/3]" />
-        <CardContent className="p-6">
-          <Skeleton className="mb-4 w-20 h-4" />
+        <div className="bg-slate-100 dark:bg-slate-800 w-full aspect-video" />
+        <CardContent className="p-4">
+          <Skeleton className="mb-2.5 w-20 h-4" />
           <Skeleton className="mb-2 w-full h-6" />
-          <Skeleton className="mb-6 w-3/4 h-4" />
-          <div className="space-y-2 mb-6">
+          <Skeleton className="mb-3 w-3/4 h-4" />
+          <div className="space-y-2 mb-4">
             <Skeleton className="w-full h-2" />
             <Skeleton className="w-full h-2" />
           </div>
-          <Skeleton className="rounded-xl w-full h-12" />
+          <Skeleton className="rounded-xl w-full h-10" />
         </CardContent>
       </Card>
     );
