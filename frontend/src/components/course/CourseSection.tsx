@@ -1,3 +1,4 @@
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CourseCard, CourseCardSkeleton } from "@/components/course/CourseCard";
@@ -111,6 +112,20 @@ export const CourseSection = ({
                 />
               );
             })}
+
+          {showViewAll && onViewAll && viewMode === 'grid' && (
+            <button
+              type="button"
+              onClick={onViewAll}
+              aria-label="View all courses"
+              className="group flex min-h-[280px] flex-col items-center justify-center gap-3 rounded-[24px] border-2 border-dashed border-neutral-200 bg-neutral-50/50 text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/[0.03] hover:text-primary dark:border-white/10 dark:bg-white/[0.02] dark:hover:border-primary/40"
+            >
+              <span className="flex h-12 w-12 items-center justify-center rounded-full border border-current/20 transition-transform group-hover:scale-110">
+                <ArrowRight className="h-5 w-5" />
+              </span>
+              <span className="text-sm font-semibold">View all courses</span>
+            </button>
+          )}
         </div>
 
         {/* Show pagination info for dashboard variant */}
@@ -134,18 +149,9 @@ export const CourseSection = ({
 
   return (
     <div className={className}>
-      {(title || (showViewAll && onViewAll)) && (
+      {title && (
         <div className="flex justify-between items-center mb-3">
-          {title ? <h2 className="text-xl font-semibold">{title}</h2> : <span />}
-          {showViewAll && onViewAll && (
-            <Button
-              variant="link"
-              className="text-primary text-sm font-medium flex items-center"
-              onClick={onViewAll}
-            >
-              View all
-            </Button>
-          )}
+          <h2 className="text-xl font-semibold">{title}</h2>
         </div>
       )}
 
