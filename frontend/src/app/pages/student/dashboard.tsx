@@ -212,7 +212,6 @@ function DashboardContent() {
             {/* Greeting + Stat Cards */}
             <section className="space-y-6">
               <div>
-                <p className="mb-1 text-sm font-semibold tracking-wide text-primary">Your Learning Journey</p>
                 <h1 className="text-xl font-bold tracking-tight text-foreground">
                   {greeting}, {studentName} 👋
                 </h1>
