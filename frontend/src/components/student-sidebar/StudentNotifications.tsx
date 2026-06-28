@@ -141,9 +141,9 @@ export function StudentNotifications() {
       <SidebarMenuButton
         onClick={() => setShowInvites((prev) => !prev)}
         tooltip="Notifications"
-        className="relative"
+        className="relative h-10 [&>svg]:size-5"
       >
-        <Bell className="h-4 w-4" />
+        <Bell className="size-5" />
         <span>Notifications</span>
         {hasIndicator && (
           <span className="absolute left-5 top-1.5 block h-2 w-2 rounded-full bg-red-500" />

@@ -65,9 +65,9 @@ export function StudentSidebar() {
         description="Are you sure you want to log out? You will need to sign in again to access your dashboard."
       />
 
-      <Sidebar collapsible="icon" variant="sidebar" className="border-r">
-        <SidebarHeader className="px-3 py-4">
-          <Link to="/student" className="flex items-center gap-3">
+      <Sidebar collapsible="icon" variant="sidebar" className="border-r bg-white dark:bg-[#17171a] [&_[data-sidebar=sidebar]]:bg-white dark:[&_[data-sidebar=sidebar]]:bg-[#17171a]">
+        <SidebarHeader className="px-2 py-4">
+          <Link to="/student" className="flex items-center gap-3 pl-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:pl-0">
             <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg">
               <img src={logo} alt="Vibe Logo" className="h-9 w-9 object-contain" />
             </div>
@@ -93,9 +93,10 @@ export function StudentSidebar() {
                         isActive={isActive(item.to)}
                         tooltip={item.title}
                         onClick={item.indicator === "announcements" ? markAnnouncementsSeen : undefined}
+                        className="h-10 [&>svg]:size-5"
                       >
                         <Link to={item.to} className="relative">
-                          <Icon className="h-4 w-4" />
+                          <Icon className="size-5" />
                           <span>{item.title}</span>
                           {showDot && (
                             <span className="absolute left-5 top-1.5 block h-2 w-2 animate-pulse rounded-full bg-red-500" />
@@ -117,21 +118,10 @@ export function StudentSidebar() {
             </SidebarMenuItem>
 
             <SidebarMenuItem>
-              <div className="flex items-center gap-2 px-2 py-1.5 group-data-[collapsible=icon]:justify-center">
+              <div className="flex h-10 items-center gap-2 p-2 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-2!">
                 <ThemeToggle />
                 {state === "expanded" && <span className="text-sm text-muted-foreground">Theme</span>}
               </div>
-            </SidebarMenuItem>
-
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                onClick={() => setConfirmLogout(true)}
-                tooltip="Logout"
-                className="text-red-600 hover:bg-red-500/10 hover:text-red-600 dark:text-red-400 dark:hover:text-red-400"
-              >
-                <LogOut className="h-4 w-4" />
-                <span>Logout</span>
-              </SidebarMenuButton>
             </SidebarMenuItem>
 
             <SidebarMenuItem>
@@ -148,6 +138,17 @@ export function StudentSidebar() {
                     <span className="text-xs text-muted-foreground">View Profile</span>
                   </div>
                 </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={() => setConfirmLogout(true)}
+                tooltip="Logout"
+                className="h-10 text-red-600 hover:bg-red-500/10 hover:text-red-600 dark:text-red-400 dark:hover:text-red-400 [&>svg]:size-5"
+              >
+                <LogOut className="size-5" />
+                <span>Logout</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
