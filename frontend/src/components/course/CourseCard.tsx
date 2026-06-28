@@ -210,7 +210,7 @@ export const CourseCard = ({ enrollment, index, isLoading, variant = 'dashboard'
           <div className="relative w-full">
             <Card
               className={cn(
-                "group flex flex-col shadow-sm rounded-[24px] overflow-hidden transition-shadow duration-300",
+                "group flex flex-col gap-0 py-0 shadow-sm rounded-[24px] overflow-hidden transition-shadow duration-300",
                 "border bg-white border-neutral-200/80 ring-1 ring-black/[0.02]",
                 "dark:bg-white/[0.03] dark:border-white/[0.07] dark:ring-white/[0.04]",
                 variant !== 'available' ? "hover:shadow-md" : ""
@@ -581,7 +581,7 @@ export const CourseCard = ({ enrollment, index, isLoading, variant = 'dashboard'
 export const CourseCardSkeleton = ({ variant }: { variant: string }) => {
   if (variant === 'dashboard' || variant === 'available') {
     return (
-      <Card className="flex flex-col bg-white dark:bg-card shadow-sm border-0 rounded-[24px] overflow-hidden animate-pulse">
+      <Card className="flex flex-col gap-0 py-0 bg-white dark:bg-card shadow-sm border-0 rounded-[24px] overflow-hidden animate-pulse">
         <div className="bg-slate-100 dark:bg-slate-800 w-full aspect-video" />
         <CardContent className="p-4">
           <Skeleton className="mb-2.5 w-20 h-4" />
