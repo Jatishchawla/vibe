@@ -122,24 +122,20 @@ export function StudentSidebar() {
 
         <SidebarFooter>
           <SidebarMenu>
-            {/* Profile tile: avatar + name link, with notifications, settings & theme on the right */}
+            {/* Profile tile: avatar + name (display only); only the settings icon navigates */}
             <SidebarMenuItem>
               <div className="flex items-center gap-1 rounded-md p-1 group-data-[collapsible=icon]:p-0">
-                <Link
-                  to="/student/profile"
-                  className={`flex min-w-0 flex-1 items-center gap-2 rounded-md p-1 transition-colors group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:justify-center ${yellowItem}`}
-                >
+                <div className="flex min-w-0 flex-1 items-center gap-2 p-1 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:justify-center">
                   <Avatar className="h-7 w-7 shrink-0 border border-border/20">
                     <AvatarImage src={user?.avatar || "/placeholder.svg"} alt={user?.name} />
                     <AvatarFallback className="bg-gradient-to-br from-primary/15 to-primary/5 text-xs font-bold text-primary">
                       {user?.name?.charAt(0).toUpperCase() || "U"}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex min-w-0 flex-col text-left group-data-[collapsible=icon]:hidden">
-                    <span className="truncate text-sm font-medium" title={user?.name}>{user?.name || "User"}</span>
-                    <span className="text-xs text-muted-foreground">View Profile</span>
-                  </div>
-                </Link>
+                  <span className="min-w-0 truncate text-sm font-medium group-data-[collapsible=icon]:hidden" title={user?.name}>
+                    {user?.name || "User"}
+                  </span>
+                </div>
 
                 <Link
                   to="/student/profile"
