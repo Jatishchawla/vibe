@@ -67,9 +67,9 @@ export const CourseCard = ({ enrollment, index, isLoading, variant = 'dashboard'
 
   const progress = Number(Math.min(enrollment.percentCompleted ?? 0, 100).toFixed(2));
 
-  const hasAssignedTimeslot = enrollment.assignedTimeSlot &&
-    Array.isArray(enrollment.assignedTimeSlot) &&
-    enrollment.assignedTimeSlot.length > 0;
+  const hasAssignedTimeslot = Array.isArray(enrollment.assignedTimeSlot)
+    ? enrollment.assignedTimeSlot.length > 0
+    : !!enrollment.assignedTimeSlot;
 
   const contentCounts = enrollment.contentCounts || {};
   const itemCounts = (contentCounts as any).itemCounts || {};
@@ -305,7 +305,6 @@ export const CourseCard = ({ enrollment, index, isLoading, variant = 'dashboard'
                           variant="outline"
                           size="icon"
                           onClick={(e) => { e.stopPropagation(); setIsTimeslotModalOpen(true); }}
-                          disabled={!hasAssignedTimeslot}
                           className="border-2 rounded-xl w-10 h-10"
                           aria-label="Pick Slot"
                           title="Pick Slot"

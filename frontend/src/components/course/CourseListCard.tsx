@@ -43,7 +43,9 @@ export const CourseListCard = ({ enrollment, index, isLoading: _isLoading, varia
   const [copied, setCopied] = useState(false);
 
   const progress = Number(Math.min(enrollment.percentCompleted ?? 0, 100).toFixed(2));
-  const hasAssignedTimeslot = enrollment.assignedTimeSlot && Array.isArray(enrollment.assignedTimeSlot) && enrollment.assignedTimeSlot.length > 0;
+  const hasAssignedTimeslot = Array.isArray(enrollment.assignedTimeSlot)
+    ? enrollment.assignedTimeSlot.length > 0
+    : !!enrollment.assignedTimeSlot;
   const isCompleted = (typeof enrollment.percentCompleted === 'number' && enrollment.percentCompleted >= 100) || false;
 
   const GURU_SETU_VERSION_ID = "6981df886e100cfe04f9c4ae";
@@ -183,7 +185,6 @@ export const CourseListCard = ({ enrollment, index, isLoading: _isLoading, varia
             <Button
               variant="outline"
               onClick={() => setIsTimeslotModalOpen(true)}
-              disabled={!hasAssignedTimeslot}
               className="h-9 gap-1.5 rounded-xl font-semibold"
               title="Pick Slot"
             >

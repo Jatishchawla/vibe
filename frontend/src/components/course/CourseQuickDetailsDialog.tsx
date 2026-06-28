@@ -141,7 +141,6 @@ export function CourseQuickDetailsDialog({
                   variant="outline"
                   className="border-2 rounded-lg w-full h-9 font-bold text-[11px]"
                   onClick={onTimeslot}
-                  disabled={!hasAssignedTimeslot}
                 >
                   <Clock className="mr-1 w-3.5 h-3.5 text-green-500" />
                   Pick Slot
