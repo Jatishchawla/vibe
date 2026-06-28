@@ -827,8 +827,10 @@ export default function CourseIssueReports() {
                             {index + 1 + (currentPage - 1) * PAGE_LIMIT}
                           </TableCell>
 
-                          <TableCell className="py-4 font-medium">
-                            {detail.reason || '-'}
+                          <TableCell className="py-4 font-medium max-w-[260px]">
+                            <span className="block truncate" title={detail.reason || '-'}>
+                              {detail.reason || '-'}
+                            </span>
                           </TableCell>
 
                           <TableCell className="py-4">
