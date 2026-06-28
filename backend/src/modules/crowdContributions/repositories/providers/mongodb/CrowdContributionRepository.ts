@@ -9,9 +9,6 @@ import {
   ICrowdContribution,
 } from '../../../classes/transformers/CrowdContribution.js';
 
-const VECTOR_INDEX_NAME = 'crowd_embedding_idx';
-const EMBEDDING_DIM = 1024;
-
 /** A lightweight, append-only record of every submit attempt (incl. rejected),
  * used for DB-backed rate limiting and later filter tuning. */
 interface ICrowdAttempt {
@@ -24,10 +21,9 @@ interface ICrowdAttempt {
   createdAt: Date;
 }
 
-export interface IVectorNeighbor {
+export interface ISegmentEmbedding {
   _id: ObjectId;
-  questionText: string;
-  score: number;
+  embedding: number[];
 }
 
 @injectable()
@@ -69,34 +65,6 @@ export class CrowdContributionRepository {
       );
     } catch {
       // indexes already exist
-    }
-
-    // Atlas Vector Search index — best-effort. Fails on non-Atlas / disabled
-    // tiers; the vector-search query degrades to "no neighbours" in that case.
-    try {
-      await (this.collection as any).createSearchIndex({
-        name: VECTOR_INDEX_NAME,
-        type: 'vectorSearch',
-        definition: {
-          fields: [
-            {
-              type: 'vector',
-              path: 'embedding',
-              numDimensions: EMBEDDING_DIM,
-              similarity: 'cosine',
-            },
-            {type: 'filter', path: 'segmentId'},
-            {type: 'filter', path: 'courseVersionId'},
-            {type: 'filter', path: 'status'},
-          ],
-        },
-      });
-    } catch (err) {
-      // Already exists, or Vector Search not enabled on this cluster.
-      console.warn(
-        'crowd: vector search index unavailable (dedup falls back to exact-signature):',
-        (err as any)?.message,
-      );
     }
   }
 
@@ -154,51 +122,30 @@ export class CrowdContributionRepository {
     });
   }
 
-  /** ANN near-duplicate search scoped to the same segment. Returns [] when the
-   * vector index is unavailable / still building (graceful degradation). */
-  async vectorSearchSimilar(input: {
+  /** Existing vectors for a segment (for in-app cosine near-dup detection).
+   * Works on any MongoDB — no Atlas Vector Search required. */
+  async listSegmentEmbeddings(input: {
     courseVersionId: string;
     segmentId: string;
-    embedding: number[];
     limit?: number;
-    numCandidates?: number;
-  }): Promise<IVectorNeighbor[]> {
+  }): Promise<ISegmentEmbedding[]> {
     await this.init();
-    try {
-      const docs = await this.collection
-        .aggregate([
-          {
-            $vectorSearch: {
-              index: VECTOR_INDEX_NAME,
-              path: 'embedding',
-              queryVector: input.embedding,
-              numCandidates: input.numCandidates ?? 100,
-              limit: input.limit ?? 5,
-              filter: {
-                segmentId: new ObjectId(input.segmentId),
-                courseVersionId: new ObjectId(input.courseVersionId),
-                status: {$in: ['PENDING_REVIEW', 'APPROVED']},
-                isDeleted: {$ne: true},
-              },
-            },
-          },
-          {
-            $project: {
-              questionText: 1,
-              score: {$meta: 'vectorSearchScore'},
-            },
-          },
-        ])
-        .toArray();
-      return docs.map(d => ({
-        _id: d._id as ObjectId,
-        questionText: (d as any).questionText,
-        score: (d as any).score,
-      }));
-    } catch (err) {
-      console.warn('crowd: $vectorSearch unavailable:', (err as any)?.message);
-      return [];
-    }
+    const docs = await this.collection
+      .find(
+        {
+          courseVersionId: new ObjectId(input.courseVersionId),
+          segmentId: new ObjectId(input.segmentId),
+          status: {$in: ['PENDING_REVIEW', 'APPROVED']},
+          isDeleted: {$ne: true},
+          embedding: {$type: 'array'},
+        },
+        {projection: {embedding: 1}},
+      )
+      .limit(input.limit ?? 500)
+      .toArray();
+    return docs
+      .filter(d => Array.isArray((d as any).embedding))
+      .map(d => ({_id: d._id as ObjectId, embedding: (d as any).embedding}));
   }
 
   async findById(id: string): Promise<ICrowdContribution | null> {

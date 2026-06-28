@@ -12,9 +12,27 @@ export interface IDuplicateDecision {
   nearestScore?: number;
 }
 
+function cosineSimilarity(a: number[], b: number[]): number {
+  if (!a || !b || a.length !== b.length || a.length === 0) return 0;
+  let dot = 0;
+  let normA = 0;
+  let normB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
+  }
+  if (normA === 0 || normB === 0) return 0;
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
 /**
  * Phase 1 dedup = DETECT-AND-FLAG only (no auto-supersede, no "which-is-better"
  * LLM). Runs only after the judge accepts and after a successful embed.
+ *
+ * Uses an in-app cosine scan over the segment's stored vectors — works on any
+ * MongoDB (including a local cluster), since dedup is scoped to a single
+ * segment and the candidate set is small.
  */
 @injectable()
 export class SimilarityService {
@@ -35,25 +53,32 @@ export class SimilarityService {
     segmentId: string;
     embedding: number[];
   }): Promise<IDuplicateDecision> {
-    const neighbours = await this.repository.vectorSearchSimilar({
+    const candidates = await this.repository.listSegmentEmbeddings({
       courseVersionId: input.courseVersionId,
       segmentId: input.segmentId,
-      embedding: input.embedding,
-      limit: 3,
     });
-    if (neighbours.length === 0) return {isDuplicate: false};
+    if (candidates.length === 0) return {isDuplicate: false};
 
-    const nearest = neighbours[0];
-    if (nearest.score >= this.hardThreshold) {
-      return {isDuplicate: true, nearestScore: nearest.score};
+    let bestId: ObjectId | undefined;
+    let bestScore = -1;
+    for (const c of candidates) {
+      const score = cosineSimilarity(input.embedding, c.embedding);
+      if (score > bestScore) {
+        bestScore = score;
+        bestId = c._id;
+      }
     }
-    if (nearest.score >= this.nearThreshold) {
+
+    if (bestScore >= this.hardThreshold) {
+      return {isDuplicate: true, nearestScore: bestScore};
+    }
+    if (bestScore >= this.nearThreshold) {
       return {
         isDuplicate: false,
-        possibleDuplicateOf: nearest._id,
-        nearestScore: nearest.score,
+        possibleDuplicateOf: bestId,
+        nearestScore: bestScore,
       };
     }
-    return {isDuplicate: false, nearestScore: nearest.score};
+    return {isDuplicate: false, nearestScore: bestScore};
   }
 }
