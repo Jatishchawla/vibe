@@ -4,7 +4,6 @@ import { useUserEnrollments, useWatchtimeTotal, usePublicCourses, useUserEnrollm
 import { useNavigate } from "@tanstack/react-router";
 
 // Import components
-import { StatCard } from "@/components/ui/StatCard";
 import { CourseSection } from "@/components/course/CourseSection";
 import { LearningInsights } from "@/components/dashboard/LearningInsights";
 // import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar"; // Hidden: Learning Checklist sidebar (commented out, not removed)
@@ -18,7 +17,7 @@ import { CourseCard } from "@/components/course/CourseCard";
 import { CourseListCard } from "@/components/course/CourseListCard";
 import { FollowUpInvitesBanner } from "@/components/course/FollowUpInvitesBanner";
 import { NewAnnouncementsPopup } from "@/components/announcements/NewAnnouncementsPopup";
-import { BookOpen, Target, GraduationCap, LayoutGrid, List } from "lucide-react";
+import { LayoutGrid, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -143,7 +142,6 @@ function DashboardContent() {
   // but simpler to let TS infer from usage if types match.
   // Explicitly casting here to be safe given previous type errors.
   const enrollments = (enrollmentsData?.enrollments || []) as unknown as CourseCardProps['enrollment'][];
-  const totalEnrollments = enrollmentsData?.totalDocuments || 0;
 
   const {
     data: publicCoursesData,
@@ -163,11 +161,6 @@ function DashboardContent() {
   const completedEnrollments = useMemo(() => {
     return enrollments.filter(enrollment => (enrollment.percentCompleted ?? 0) === 100);
   }, [enrollments]);
-
-  const totalProgress = statsData?.overallProgress ?? 0;
-
-  const enrolledCount = statsData?.totalCourses ?? totalEnrollments;
-  const completedCount = statsData?.completedCourses ?? completedEnrollments.length;
 
   // Tab State
   const [activeTab, setActiveTab] = useState("available");
@@ -209,40 +202,14 @@ function DashboardContent() {
       <div className="w-full">
         <div className="flex flex-col gap-6 lg:flex-row">
           <main className="w-full min-w-0 flex-1 space-y-6">
-            {/* Greeting + Stat Cards */}
-            <section className="space-y-6">
-              <div>
-                <h1 className="text-xl font-bold tracking-tight text-foreground">
-                  {greeting}, {studentName} 👋
-                </h1>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Welcome back — here's your progress at a glance.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <StatCard
-                  tone="amber"
-                  icon={<BookOpen className="h-5 w-5" />}
-                  value={statsLoading ? "—" : `${enrolledCount}`}
-                  label="Enrolled Courses"
-                  sublabel="In your catalog"
-                />
-                <StatCard
-                  tone="emerald"
-                  icon={<Target className="h-5 w-5" />}
-                  value={statsLoading ? "—" : `${totalProgress}%`}
-                  label="Overall Progress"
-                  sublabel="Across all courses"
-                />
-                <StatCard
-                  tone="violet"
-                  icon={<GraduationCap className="h-5 w-5" />}
-                  value={statsLoading ? "—" : `${completedCount}`}
-                  label="Courses Completed"
-                  sublabel="Successfully finished"
-                />
-              </div>
+            {/* Greeting */}
+            <section>
+              <h1 className="text-xl font-bold tracking-tight text-foreground">
+                {greeting}, {studentName} 👋
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Welcome back — here's your progress at a glance.
+              </p>
             </section>
 
             {/* Exclusive follow-up course invites unlocked by completing a course */}
