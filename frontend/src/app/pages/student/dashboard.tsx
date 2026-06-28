@@ -206,7 +206,7 @@ function DashboardContent() {
     <>
       {/* Auto-popup any announcements the student hasn't seen yet */}
       <NewAnnouncementsPopup />
-      <div className="container mx-auto">
+      <div className="w-full">
         <div className="flex flex-col gap-6 lg:flex-row">
           <main className="w-full min-w-0 flex-1 space-y-6">
             {/* Hero + Stat Cards Section */}

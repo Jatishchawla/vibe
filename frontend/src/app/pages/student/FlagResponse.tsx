@@ -689,7 +689,7 @@ export default function CourseIssueReports() {
 
   return (
     <div className="bg-background">
-      <div className="container mx-auto min-w-0 space-y-8">
+      <div className="min-w-0 space-y-8">
         <PageHeader
           title="My Issues"
           description="Review and manage all the issues you raised."

@@ -65,7 +65,7 @@ export default function StudentCohorts() {
 
     return (
         <TooltipProvider>
-            <div className="container mx-auto max-w-6xl space-y-6">
+            <div className="w-full space-y-6">
                 <PageHeader
                     title="My Cohorts"
                     description="Select a cohort to view your activities, submissions, and current House Points (HP) standing."

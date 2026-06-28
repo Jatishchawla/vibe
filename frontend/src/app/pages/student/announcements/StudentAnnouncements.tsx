@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 export default function StudentAnnouncements() {
     return (
         <div className="flex-1">
-            <div className="max-w-6xl mx-auto space-y-8 min-w-0">
+            <div className="space-y-8 min-w-0">
                 <PageHeader
                     title="Announcements"
                     description="Updates from your courses and the platform"
