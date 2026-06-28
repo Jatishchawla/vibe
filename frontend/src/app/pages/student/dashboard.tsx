@@ -245,7 +245,7 @@ function DashboardContent() {
               onResume={handleResume}
             />
 
-            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full space-y-6">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full space-y-2">
               <div className="flex items-center justify-between gap-3">
               <TabsList className="w-full md:w-fit flex h-auto p-1 bg-neutral-100/80 dark:bg-white/[0.04] rounded-xl border border-neutral-200/70 dark:border-white/[0.07] overflow-x-auto scrollbar-hide">
                 <TabsTrigger
@@ -305,7 +305,7 @@ function DashboardContent() {
               </div>
               </div>
 
-              <TabsContent value="available" className="mt-4 space-y-4 animate-in fade-in-50 duration-300 slide-in-from-left-2">
+              <TabsContent value="available" className="mt-2 space-y-4 animate-in fade-in-50 duration-300 slide-in-from-left-2">
                 <CourseSection
                   title=""
                   viewMode={viewMode}
@@ -334,7 +334,7 @@ function DashboardContent() {
                 />
               </TabsContent>
 
-              <TabsContent value="enrolled" className="mt-4 space-y-4 animate-in fade-in-50 duration-300 slide-in-from-left-2">
+              <TabsContent value="enrolled" className="mt-2 space-y-4 animate-in fade-in-50 duration-300 slide-in-from-left-2">
                 <div className="space-y-4">
                   {enrollmentsLoading ? (
                     <div className={cn(
@@ -384,7 +384,7 @@ function DashboardContent() {
                 </div>
               </TabsContent>
 
-              <TabsContent value="completed" className="mt-4 space-y-4 animate-in fade-in-50 duration-300 slide-in-from-left-2">
+              <TabsContent value="completed" className="mt-2 space-y-4 animate-in fade-in-50 duration-300 slide-in-from-left-2">
                 <div className="space-y-4">
                   {enrollmentsLoading ? (
                     <div className={cn(
