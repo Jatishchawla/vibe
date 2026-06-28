@@ -40,6 +40,17 @@ export class MongoDatabase implements IDatabase<Db> {
       return;
     }
 
+    // Fail fast on a missing/empty DB_URL. Without this guard an empty URI
+    // either throws a cryptic driver error (CI) or silently hangs the whole
+    // process (e.g. `pnpm test:ci` with no DB configured). Make the cause loud
+    // and immediate. Set SKIP_DB_CONNECTION=true to intentionally run without a DB.
+    if (!uri || !uri.trim()) {
+      throw new Error(
+        'MongoDatabase: DB_URL is missing or empty. Set DB_URL (and DB_NAME) ' +
+          'in the environment, or set SKIP_DB_CONNECTION=true to run without a database.',
+      );
+    }
+
     this.client = new MongoClient(uri, {
       ssl: true,
       tls: true,
@@ -54,6 +65,10 @@ export class MongoDatabase implements IDatabase<Db> {
       maxIdleTimeMS: 60000,
 
       // 🔹 TIMEOUTS
+      // serverSelectionTimeoutMS bounds how long an unreachable/misconfigured
+      // DB will block before throwing — without it the driver retries for ~30s
+      // and the process appears to hang. Keep it short so failures surface fast.
+      serverSelectionTimeoutMS: 10000,
       connectTimeoutMS: 20000,
       socketTimeoutMS: 30000,
 
