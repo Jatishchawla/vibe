@@ -54,10 +54,13 @@ export function StudentSidebar() {
     (item) => item.requires !== "hpSystem" || hasHpSystem,
   )
 
-  // One flat yellow used for every item's hover + active background.
+  // One flat yellow for hover/active/press — the active:* + ring overrides kill
+  // the default amber "sidebar-accent" press shade so clicking never flashes orange.
   const yellowItem =
-    "hover:bg-yellow-100 hover:text-yellow-900 data-[active=true]:bg-yellow-100 data-[active=true]:text-yellow-900 " +
-    "dark:hover:bg-yellow-400/10 dark:hover:text-yellow-100 dark:data-[active=true]:bg-yellow-400/10 dark:data-[active=true]:text-yellow-100"
+    "hover:bg-yellow-100 hover:text-yellow-900 active:bg-yellow-100 active:text-yellow-900 " +
+    "data-[active=true]:bg-yellow-100 data-[active=true]:text-yellow-900 focus-visible:ring-yellow-300 " +
+    "dark:hover:bg-yellow-400/10 dark:hover:text-yellow-100 dark:active:bg-yellow-400/10 " +
+    "dark:data-[active=true]:bg-yellow-400/10 dark:data-[active=true]:text-yellow-100"
 
   return (
     <>
