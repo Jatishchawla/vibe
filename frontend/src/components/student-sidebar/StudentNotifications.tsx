@@ -35,7 +35,7 @@ type Invite = {
  * outside-click handling, the dropdown, and the policy-acknowledgement modal.
  * Behaviour is unchanged — it was lifted out verbatim to keep the layout thin.
  */
-export function StudentNotifications() {
+export function StudentNotifications({ compact = false }: { compact?: boolean }) {
   const { user, isAuthReady, token } = useAuthStore()
   const { getInvites } = useInvites()
 
@@ -138,17 +138,32 @@ export function StudentNotifications() {
 
   return (
     <div className="relative" ref={invitesRef}>
-      <SidebarMenuButton
-        onClick={() => setShowInvites((prev) => !prev)}
-        tooltip="Notifications"
-        className="relative h-10 [&>svg]:size-5"
-      >
-        <Bell className="size-5" />
-        <span>Notifications</span>
-        {hasIndicator && (
-          <span className="absolute left-5 top-1.5 block h-2 w-2 rounded-full bg-red-500" />
-        )}
-      </SidebarMenuButton>
+      {compact ? (
+        <button
+          type="button"
+          onClick={() => setShowInvites((prev) => !prev)}
+          aria-label="Notifications"
+          title="Notifications"
+          className="relative flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        >
+          <Bell className="size-5" />
+          {hasIndicator && (
+            <span className="absolute right-1.5 top-1.5 block h-2 w-2 rounded-full bg-red-500" />
+          )}
+        </button>
+      ) : (
+        <SidebarMenuButton
+          onClick={() => setShowInvites((prev) => !prev)}
+          tooltip="Notifications"
+          className="relative h-10 [&>svg]:size-5"
+        >
+          <Bell className="size-5" />
+          <span>Notifications</span>
+          {hasIndicator && (
+            <span className="absolute left-5 top-1.5 block h-2 w-2 rounded-full bg-red-500" />
+          )}
+        </SidebarMenuButton>
+      )}
 
       {showInvites && (
         <InviteDropdown

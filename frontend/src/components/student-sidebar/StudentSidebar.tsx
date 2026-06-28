@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Link, useLocation, useNavigate } from "@tanstack/react-router"
-import { LogOut } from "lucide-react"
+import { LogOut, Settings } from "lucide-react"
 import { useAuthStore } from "@/store/auth-store"
 import { useUserEnrollments } from "@/hooks/hooks"
 import { useNewAnnouncementIndicator } from "@/hooks/use-new-announcement-indicator"
@@ -114,31 +114,43 @@ export function StudentSidebar() {
         <SidebarFooter>
           <SidebarMenu>
             <SidebarMenuItem>
-              <StudentNotifications />
-            </SidebarMenuItem>
-
-            <SidebarMenuItem>
               <div className="flex h-10 items-center gap-2 p-2 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-2!">
                 <ThemeToggle />
                 {state === "expanded" && <span className="text-sm text-muted-foreground">Theme</span>}
               </div>
             </SidebarMenuItem>
 
+            {/* Profile tile: avatar + name link, with notifications & settings on the right */}
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={isActive("/student/profile")} tooltip={user?.name || "Profile"} size="lg">
-                <Link to="/student/profile">
-                  <Avatar className="h-7 w-7 border border-border/20">
+              <div className="flex items-center gap-1 rounded-md p-1 group-data-[collapsible=icon]:p-0">
+                <Link
+                  to="/student/profile"
+                  className="flex min-w-0 flex-1 items-center gap-2 rounded-md p-1 transition-colors hover:bg-accent group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:justify-center"
+                >
+                  <Avatar className="h-7 w-7 shrink-0 border border-border/20">
                     <AvatarImage src={user?.avatar || "/placeholder.svg"} alt={user?.name} />
                     <AvatarFallback className="bg-gradient-to-br from-primary/15 to-primary/5 text-xs font-bold text-primary">
                       {user?.name?.charAt(0).toUpperCase() || "U"}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex min-w-0 flex-col text-left">
+                  <div className="flex min-w-0 flex-col text-left group-data-[collapsible=icon]:hidden">
                     <span className="truncate text-sm font-medium" title={user?.name}>{user?.name || "User"}</span>
                     <span className="text-xs text-muted-foreground">View Profile</span>
                   </div>
                 </Link>
-              </SidebarMenuButton>
+
+                <div className="flex items-center gap-0.5 group-data-[collapsible=icon]:hidden">
+                  <StudentNotifications compact />
+                  <Link
+                    to="/student/profile"
+                    aria-label="Settings"
+                    title="Settings"
+                    className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  >
+                    <Settings className="size-5" />
+                  </Link>
+                </div>
+              </div>
             </SidebarMenuItem>
 
             <SidebarMenuItem>
