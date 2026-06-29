@@ -146,6 +146,59 @@ export function overallItemsPerWeek(courses: CourseAnalytics[]): number {
   return Math.round(total * 10) / 10;
 }
 
+export interface Forecast {
+  course: CourseAnalytics;
+  remaining: number;
+  projectedDays: number;     // days to finish at current pace
+  projectedDate: Date;
+  goalDays: number;          // the target horizon used for the nudge
+  goalDate: Date;
+  currentPerWeek: number;
+  neededPerWeek: number;     // lessons/week to hit the goal
+  extraPerWeek: number;      // additional lessons/week vs current pace (0 if ahead)
+  onTrack: boolean;          // already projected to finish within the goal
+}
+
+function addDays(days: number): Date {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+export function formatDate(d: Date): string {
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+/**
+ * Pick the most actionable in-progress course (closest to done with a
+ * measurable pace) and compute a finish forecast + a "to hit the goal, do N/week"
+ * nudge. `goalDays` is the target horizon the nudge aims for.
+ */
+export function buildForecast(courses: CourseAnalytics[], goalDays = 28): Forecast | null {
+  const target = courses
+    .filter((c) => c.progress > 0 && c.progress < 100 && c.itemsPerWeek > 0 && c.projectedFinishDays != null)
+    .sort((a, b) => b.progress - a.progress)[0];
+  if (!target) return null;
+
+  const remaining = Math.max(target.totalItems - target.completedItems, 0);
+  const neededPerWeek = Math.ceil((remaining / (goalDays / 7)) * 10) / 10;
+  const currentPerWeek = Math.round(target.itemsPerWeek * 10) / 10;
+  const projectedDays = target.projectedFinishDays as number;
+
+  return {
+    course: target,
+    remaining,
+    projectedDays,
+    projectedDate: addDays(projectedDays),
+    goalDays,
+    goalDate: addDays(goalDays),
+    currentPerWeek,
+    neededPerWeek,
+    extraPerWeek: Math.max(0, Math.round((neededPerWeek - currentPerWeek) * 10) / 10),
+    onTrack: projectedDays <= goalDays,
+  };
+}
+
 export const STATUS_META: Record<CourseStatus, { label: string; className: string }> = {
   completed: { label: "Completed", className: "bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-400" },
   almost: { label: "Almost done", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400" },
