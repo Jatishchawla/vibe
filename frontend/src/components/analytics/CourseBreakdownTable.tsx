@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { cn } from "@/utils/utils";
-import { STATUS_META, type CourseAnalytics } from "./analytics-utils";
+import { STATUS_META, progressTone, type CourseAnalytics } from "./analytics-utils";
 
 /** Per-course breakdown: progress, lessons, quiz score, pace and status. */
 export function CourseBreakdownTable({ courses }: { courses: CourseAnalytics[] }) {
@@ -37,7 +37,7 @@ export function CourseBreakdownTable({ courses }: { courses: CourseAnalytics[] }
                     <td className="px-3 py-3">
                       <div className="flex items-center gap-2">
                         <div className="h-1.5 w-16 overflow-hidden rounded-full bg-neutral-100 dark:bg-white/10">
-                          <div className="h-full rounded-full bg-primary" style={{ width: `${c.progress}%` }} />
+                          <div className={cn("h-full rounded-full", progressTone(c.progress))} style={{ width: `${c.progress}%` }} />
                         </div>
                         <span className="tabular-nums text-xs font-semibold text-foreground">{c.progress}%</span>
                       </div>

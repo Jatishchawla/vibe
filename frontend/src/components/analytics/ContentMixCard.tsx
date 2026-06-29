@@ -1,13 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { cn } from "@/utils/utils";
-import type { ContentMix } from "./analytics-utils";
-
-const BAR_TONES: Record<ContentMix["key"], string> = {
-  videos: "bg-violet-500",
-  quizzes: "bg-blue-500",
-  articles: "bg-emerald-500",
-  projects: "bg-amber-500",
-};
+import { progressTone, type ContentMix } from "./analytics-utils";
 
 /** Per content-type completion (videos / quizzes / articles / projects). */
 export function ContentMixCard({ mix }: { mix: ContentMix[] }) {
@@ -31,7 +24,7 @@ export function ContentMixCard({ mix }: { mix: ContentMix[] }) {
                   </span>
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-100 dark:bg-white/10">
-                  <div className={cn("h-full rounded-full transition-all duration-700 ease-out", BAR_TONES[m.key])} style={{ width: `${pct}%` }} />
+                  <div className={cn("h-full rounded-full transition-all duration-700 ease-out", progressTone(pct))} style={{ width: `${pct}%` }} />
                 </div>
               </div>
             );

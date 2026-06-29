@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Flag } from "lucide-react";
-import { closestToFinishing, type CourseAnalytics } from "./analytics-utils";
+import { cn } from "@/utils/utils";
+import { closestToFinishing, progressTone, type CourseAnalytics } from "./analytics-utils";
 
 /**
  * "Closest to finishing" — your quickest wins. Truthful and actionable: just
@@ -33,7 +34,7 @@ export function VelocityCard({ courses }: { courses: CourseAnalytics[] }) {
                 <span className="shrink-0 tabular-nums text-xs font-semibold text-foreground">{c.progress}%</span>
               </div>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-100 dark:bg-white/10">
-                <div className="h-full rounded-full bg-emerald-500 transition-all duration-700 ease-out" style={{ width: `${c.progress}%` }} />
+                <div className={cn("h-full rounded-full transition-all duration-700 ease-out", progressTone(c.progress))} style={{ width: `${c.progress}%` }} />
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
                 {c.remaining > 0 ? `${c.remaining} lesson${c.remaining === 1 ? "" : "s"} left` : "Final items remaining"}

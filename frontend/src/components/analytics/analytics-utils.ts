@@ -113,6 +113,13 @@ export function averageQuizPercent(courses: CourseAnalytics[]): number | null {
   return Math.round(scored.reduce((s, c) => s + (c.quizPercent || 0), 0) / scored.length);
 }
 
+/** Progress-bar fill color that shifts red → amber → green as % rises. */
+export function progressTone(pct: number): string {
+  if (pct >= 75) return "bg-emerald-500";
+  if (pct >= 40) return "bg-amber-500";
+  return "bg-rose-500";
+}
+
 /** In-progress courses sorted by closeness to completion — the quickest wins. */
 export function closestToFinishing(courses: CourseAnalytics[], limit = 3): CourseAnalytics[] {
   return courses
