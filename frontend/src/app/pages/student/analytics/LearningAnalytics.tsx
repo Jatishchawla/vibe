@@ -94,9 +94,9 @@ export default function LearningAnalytics() {
           {/* Headline KPIs */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard tone="emerald" icon={<Target className="h-5 w-5" />} value={`${overallProgress}%`} label="Overall Progress" sublabel="Across all courses" />
-            <StatCard tone="amber" icon={<BookOpen className="h-5 w-5" />} value={`${completedItems}/${totalItems}`} label="Lessons Completed" sublabel="Items finished" />
-            <StatCard tone="violet" icon={<GraduationCap className="h-5 w-5" />} value={`${completedCourses}/${totalCourses}`} label="Courses Completed" sublabel="Fully finished" />
             <StatCard tone="blue" icon={<Activity className="h-5 w-5" />} value={`${activeCourses}`} label="Active Courses" sublabel="Currently in progress" />
+            <StatCard tone="violet" icon={<GraduationCap className="h-5 w-5" />} value={`${completedCourses}/${totalCourses}`} label="Courses Completed" sublabel="Fully finished" />
+            <StatCard tone="amber" icon={<BookOpen className="h-5 w-5" />} value={`${completedItems}/${totalItems}`} label="Lessons Completed" sublabel="Items finished" />
           </div>
 
           {/* Pace + content mix + quiz performance */}
