@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { RefreshCw, BookOpen, Target, GraduationCap, Activity } from "lucide-react";
 import { useAuthStore } from "@/store/auth-store";
-import { useUserEnrollmentsDetails, useUserEnrollmentStats } from "@/hooks/hooks";
+import { useUserEnrollments, useUserEnrollmentStats } from "@/hooks/hooks";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { Button } from "@/components/ui/button";
@@ -22,12 +22,12 @@ export default function LearningAnalytics() {
   const { token } = useAuthStore();
   const enabled = !!token;
 
-  const { data: detailsData, isLoading: detailsLoading, refetch, } = useUserEnrollmentsDetails(enabled, "", "STUDENT");
+  const { data: enrollmentsData, isLoading: enrollmentsLoading, refetch } = useUserEnrollments(1, 100, enabled);
   const { data: stats, isLoading: statsLoading } = useUserEnrollmentStats(enabled);
 
   const courses = useMemo(
-    () => ((detailsData as any)?.enrollments || []).map((e: any, i: number) => toCourseAnalytics(e, i)),
-    [detailsData],
+    () => ((enrollmentsData as any)?.enrollments || []).map((e: any, i: number) => toCourseAnalytics(e, i)),
+    [enrollmentsData],
   );
 
   const contentMix = useMemo(() => aggregateContentMix(courses), [courses]);
@@ -44,7 +44,7 @@ export default function LearningAnalytics() {
   const totalItems = summedTotal > 0 ? summedTotal : (stats?.totalItems ?? 0);
   const activeCourses = courses.filter((c: any) => c.progress < 100).length;
 
-  const isLoading = detailsLoading || statsLoading;
+  const isLoading = enrollmentsLoading || statsLoading;
 
   return (
     <div className="flex flex-1 flex-col gap-6">
