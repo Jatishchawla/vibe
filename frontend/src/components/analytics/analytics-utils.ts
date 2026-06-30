@@ -101,7 +101,7 @@ export function aggregateContentMix(courses: CourseAnalytics[]): ContentMix[] {
   return [
     { key: "videos", label: "Videos", ...sum((c) => c.videos) },
     { key: "quizzes", label: "Quizzes", ...sum((c) => c.quizzes) },
-    { key: "articles", label: "Articles", ...sum((c) => c.articles) },
+    { key: "articles", label: "Reading", ...sum((c) => c.articles) },
     { key: "projects", label: "Projects", ...sum((c) => c.projects) },
   ].filter((m) => m.total > 0);
 }
