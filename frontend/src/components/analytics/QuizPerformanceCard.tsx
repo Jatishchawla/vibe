@@ -7,8 +7,11 @@ const tone = (pct: number) =>
   : pct >= 50 ? "text-amber-600 dark:text-amber-400"
   : "text-red-600 dark:text-red-400";
 
-const barTone = (pct: number) =>
-  pct >= 75 ? "bg-emerald-500" : pct >= 50 ? "bg-amber-500" : "bg-red-500";
+/** Soft pill (bg + text) for a score grade — reads as a mark, not progress. */
+const gradePill = (pct: number) =>
+  pct >= 75 ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400"
+  : pct >= 50 ? "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400"
+  : "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400";
 
 /** Quiz accuracy overall + per course that has graded quizzes. */
 export function QuizPerformanceCard({ courses, average }: { courses: CourseAnalytics[]; average: number | null }) {
@@ -29,17 +32,15 @@ export function QuizPerformanceCard({ courses, average }: { courses: CourseAnaly
       {scored.length === 0 ? (
         <p className="py-6 text-center text-sm text-muted-foreground">No graded quizzes yet.</p>
       ) : (
-        <div className="space-y-3">
+        <div className="divide-y divide-border/60">
           {scored.map((c) => (
-            <div key={c.id}>
-              <div className="mb-1 flex items-center justify-between gap-2 text-xs">
-                <span className="truncate font-medium text-foreground" title={c.name}>{c.name}</span>
-                <span className="shrink-0 tabular-nums text-muted-foreground">
-                  {c.quizScore}/{c.quizMaxScore} · <span className={cn("font-semibold", tone(c.quizPercent || 0))}>{c.quizPercent}%</span>
+            <div key={c.id} className="flex items-center justify-between gap-3 py-2.5">
+              <span className="min-w-0 truncate text-sm font-medium text-foreground" title={c.name}>{c.name}</span>
+              <div className="flex shrink-0 items-center gap-2">
+                <span className="tabular-nums text-xs text-muted-foreground">{c.quizScore}/{c.quizMaxScore}</span>
+                <span className={cn("rounded-md px-2 py-0.5 text-xs font-bold tabular-nums", gradePill(c.quizPercent || 0))}>
+                  {c.quizPercent}%
                 </span>
-              </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-100 dark:bg-white/10">
-                <div className={cn("h-full rounded-full transition-all duration-700 ease-out", barTone(c.quizPercent || 0))} style={{ width: `${c.quizPercent}%` }} />
               </div>
             </div>
           ))}
