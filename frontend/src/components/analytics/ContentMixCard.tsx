@@ -6,8 +6,10 @@ import { progressTone, type ContentMix } from "./analytics-utils";
 export function ContentMixCard({ mix }: { mix: ContentMix[] }) {
   return (
     <Card className="h-full rounded-2xl border p-5">
-      <h3 className="text-sm font-semibold text-foreground">Content completed</h3>
-      <p className="mb-4 text-xs text-muted-foreground">Across all your courses, by type</p>
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold text-foreground">Content completed</h3>
+        <p className="text-xs text-muted-foreground">Across all your courses, by type</p>
+      </div>
 
       {mix.length === 0 ? (
         <p className="py-6 text-center text-sm text-muted-foreground">No content data yet.</p>
