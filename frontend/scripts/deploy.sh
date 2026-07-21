@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+
+
+#hi  this is the deploy.sh
+
 set -e
 
 LOG_FILE="deploy.log"

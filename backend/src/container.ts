@@ -16,6 +16,7 @@ import { EnrollmentService } from './modules/users/services/EnrollmentService.js
 
 
 
+
 export const sharedContainerModule = new ContainerModule(options => {
   const uri = dbConfig.url;
   const dbName = dbConfig.dbName;
@@ -43,6 +44,7 @@ export const sharedContainerModule = new ContainerModule(options => {
     .inSingletonScope();
 
   // Other
+  // This is the container.ts
   options.bind(HttpErrorHandler).toSelf().inSingletonScope();
   options.bind(AuditTrailsHandler).toSelf().inSingletonScope();
 }); 
