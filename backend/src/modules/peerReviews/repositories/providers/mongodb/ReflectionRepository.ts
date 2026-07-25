@@ -31,6 +31,18 @@ export interface ISectionReflectionStats {
 export class ReflectionRepository {
   private reflections!: Collection<IReflection>;
   private reviews!: Collection<IReflectionReview>;
+  /**
+   * One counter per (reviewer, item): reviews the student has reserved toward
+   * their quota. A shared document is the point — concurrent reviews across
+   * different reflections serialise on it, which counting review docs after the
+   * fact cannot do. See reserveReviewSlot.
+   */
+  private reviewQuota!: Collection<{
+    _id?: ObjectId;
+    reviewerId: ObjectId;
+    itemId: ObjectId;
+    used: number;
+  }>;
   /** The REFLECTION item documents, read only for their instructor policy. */
   private items!: Collection<{_id: ObjectId; details?: Partial<ReflectionPolicy>}>;
   /** Read only to put a name against a reflection in the instructor view. */
@@ -60,6 +72,7 @@ export class ReflectionRepository {
       lastName?: string;
       email?: string;
     }>('users');
+    this.reviewQuota = await this.db.getCollection('reflectionReviewQuota');
     this.initialized = true;
 
     try {
@@ -88,9 +101,65 @@ export class ReflectionRepository {
         {reviewerId: 1, itemId: 1},
         {background: true},
       );
+      // One quota counter per (reviewer, item); the uniqueness is what makes a
+      // reservation against a full quota collide instead of double-creating.
+      await this.reviewQuota.createIndex(
+        {reviewerId: 1, itemId: 1},
+        {unique: true, background: true},
+      );
     } catch {
       // Indexes already exist.
     }
+  }
+
+  /**
+   * Atomically reserve one review slot for this student on this item, returning
+   * false when they have already used their whole quota.
+   *
+   * `findOneAndUpdate` on the shared counter is the atomic gate: the filter only
+   * matches while `used < quota`, so two concurrent reviews cannot both pass —
+   * one increments, the other finds no match and, because of the unique index,
+   * collides on the upsert (11000) rather than creating a second counter. Either
+   * way the second caller gets `false`. Pair every true with releaseReviewSlot
+   * if the review that follows does not go through.
+   */
+  async reserveReviewSlot(
+    reviewerId: string,
+    itemId: string,
+    quota: number,
+  ): Promise<boolean> {
+    await this.init();
+    if (quota <= 0) return false;
+    try {
+      const doc = await this.reviewQuota.findOneAndUpdate(
+        {
+          reviewerId: new ObjectId(reviewerId),
+          itemId: new ObjectId(itemId),
+          used: {$lt: quota},
+        },
+        {$inc: {used: 1}},
+        {upsert: true, returnDocument: 'after'},
+      );
+      return doc !== null;
+    } catch (e: any) {
+      // Counter exists and is already at the quota → upsert hits the unique
+      // index. That is exactly "no slot left".
+      if (e?.code === 11000) return false;
+      throw e;
+    }
+  }
+
+  /** Give back a reserved slot when the review it was for did not complete. */
+  async releaseReviewSlot(reviewerId: string, itemId: string): Promise<void> {
+    await this.init();
+    await this.reviewQuota.updateOne(
+      {
+        reviewerId: new ObjectId(reviewerId),
+        itemId: new ObjectId(itemId),
+        used: {$gt: 0},
+      },
+      {$inc: {used: -1}},
+    );
   }
 
   /**
@@ -165,10 +234,21 @@ export class ReflectionRepository {
     return out;
   }
 
-  async create(reflection: Reflection): Promise<string> {
+  /**
+   * Insert a reflection. Returns null when the unique (userId, itemId) index
+   * rejects it as a duplicate, so the service can turn two racing submissions
+   * from one student into a clean "already submitted" rather than an uncaught
+   * duplicate-key error. Mirrors the 11000 handling in recordReview.
+   */
+  async create(reflection: Reflection): Promise<string | null> {
     await this.init();
-    const result = await this.reflections.insertOne(reflection);
-    return result.insertedId.toString();
+    try {
+      const result = await this.reflections.insertOne(reflection);
+      return result.insertedId.toString();
+    } catch (e: any) {
+      if (e?.code === 11000) return null;
+      throw e;
+    }
   }
 
   async findById(reflectionId: string): Promise<IReflection | null> {

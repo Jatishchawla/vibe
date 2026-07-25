@@ -40,15 +40,37 @@ class FakeRepo {
   reviews: {reflectionId: string; reviewerId: string; itemId: string}[] = [];
   /** Per-item instructor overrides; empty means "use the defaults". */
   policyOverrides: Partial<ReflectionPolicy> = {};
+  /** Reserved review slots per `${reviewerId}:${itemId}`. */
+  quota = new Map<string, number>();
+  /** Force create() to report a duplicate, to exercise the race path. */
+  failNextCreateAsDuplicate = false;
 
   async getPolicy(): Promise<ReflectionPolicy> {
     return resolvePolicy(this.policyOverrides);
   }
 
-  async create(reflection: IReflection): Promise<string> {
+  async create(reflection: IReflection): Promise<string | null> {
+    if (this.failNextCreateAsDuplicate) {
+      this.failNextCreateAsDuplicate = false;
+      return null;
+    }
     const _id = new ObjectId();
     this.reflections.push({...reflection, _id});
     return _id.toString();
+  }
+
+  async reserveReviewSlot(reviewerId: string, itemId: string, quota: number) {
+    if (quota <= 0) return false;
+    const key = `${reviewerId}:${itemId}`;
+    const used = this.quota.get(key) ?? 0;
+    if (used >= quota) return false;
+    this.quota.set(key, used + 1);
+    return true;
+  }
+
+  async releaseReviewSlot(reviewerId: string, itemId: string) {
+    const key = `${reviewerId}:${itemId}`;
+    this.quota.set(key, Math.max((this.quota.get(key) ?? 0) - 1, 0));
   }
 
   async findById(id: string) {

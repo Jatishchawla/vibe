@@ -82,6 +82,8 @@ export class ReflectionService {
     }
     this.assertInScoreRange(input.confidence, 'confidence');
 
+    // Fast path: a readable rejection for the common case of revisiting an item
+    // already submitted. The unique index is the real guard — see below.
     const existing = await this.repository.findByUserAndItem(
       input.userId,
       input.itemId,
@@ -92,9 +94,18 @@ export class ReflectionService {
       );
     }
 
+    // create() returns null when the unique (userId, itemId) index rejects a
+    // duplicate — the case the findByUserAndItem check above cannot cover, when
+    // two submissions from the same student race. Treat it as the same clean
+    // "already submitted" rather than letting a duplicate-key error surface.
     const reflectionId = await this.repository.create(
       new Reflection({...input, text}),
     );
+    if (reflectionId === null) {
+      throw new BadRequestError(
+        'You have already submitted a reflection for this section.',
+      );
+    }
     return {reflectionId};
   }
 
@@ -177,31 +188,44 @@ export class ReflectionService {
     }
 
     const policy = await this.repository.getPolicy(reflection.itemId.toString());
+    const itemId = reflection.itemId.toString();
 
-    // Enforce the quota as a hard cap on the server, so it holds regardless of
-    // what the client offers. Checked before the write, so a student can never
-    // exceed the number of reviews the instructor set.
-    const alreadyDone = await this.repository.countReviewsByReviewer(
+    // Enforce the quota as a hard cap, atomically. A plain count-then-write can
+    // be beaten by a reviewer firing concurrent reviews at different
+    // reflections — each reads the same count and both proceed. Reserving a slot
+    // on the shared per-(reviewer, item) counter serialises them, so the total
+    // can never exceed the configured quota by even one.
+    const reserved = await this.repository.reserveReviewSlot(
       input.reviewerId,
-      reflection.itemId.toString(),
+      itemId,
+      policy.requiredReviewsToUnlock,
     );
-    if (alreadyDone >= policy.requiredReviewsToUnlock) {
+    if (!reserved) {
       throw new BadRequestError(
         'You have completed all the reviews assigned for this reflection.',
       );
     }
 
-    const result = await this.repository.recordReview({
-      reflectionId: input.reflectionId,
-      reviewerId: input.reviewerId,
-      courseVersionId: reflection.courseVersionId.toString(),
-      itemId: reflection.itemId.toString(),
-      scores: input.scores,
-      helpful: input.helpful,
-      maxReviewsPerReflection: policy.maxReviewsPerReflection,
-    });
+    let result;
+    try {
+      result = await this.repository.recordReview({
+        reflectionId: input.reflectionId,
+        reviewerId: input.reviewerId,
+        courseVersionId: reflection.courseVersionId.toString(),
+        itemId,
+        scores: input.scores,
+        helpful: input.helpful,
+        maxReviewsPerReflection: policy.maxReviewsPerReflection,
+      });
+    } catch (e) {
+      // The reservation was taken but the review did not land — hand the slot
+      // back so a transient failure does not cost the student a review.
+      await this.repository.releaseReviewSlot(input.reviewerId, itemId);
+      throw e;
+    }
 
     if (result.applied === false) {
+      await this.repository.releaseReviewSlot(input.reviewerId, itemId);
       throw new BadRequestError(
         result.reason === 'DUPLICATE'
           ? 'You have already reviewed this reflection.'

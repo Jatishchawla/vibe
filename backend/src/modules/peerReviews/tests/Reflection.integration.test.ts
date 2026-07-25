@@ -279,6 +279,64 @@ describe('peer reviews — real MongoDB', () => {
   });
 
 
+  it('rejects a duplicate submission race with a clean error, not a crash', async () => {
+    const item = await makeItem();
+    const author = new ObjectId().toString();
+
+    // Two submissions from the same student for the same item, fired together.
+    const results = await Promise.allSettled([
+      submit(author, item),
+      submit(author, item),
+    ]);
+
+    const ok = results.filter(r => r.status === 'fulfilled');
+    const rejected = results.filter(
+      r => r.status === 'rejected',
+    ) as PromiseRejectedResult[];
+
+    // Exactly one wins; the other is a clean "already submitted", not an 11000.
+    expect(ok).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    expect(String(rejected[0].reason?.message)).toMatch(/already submitted/i);
+
+    const count = await db
+      .collection('reflections')
+      .countDocuments({userId: new ObjectId(author)});
+    expect(count).toBe(1);
+  });
+
+  it('holds a reviewer to their quota under concurrent reviews', async () => {
+    // Quota of 2, but five reflections available and five reviews fired at once.
+    const item = await makeItem({
+      requiredReviewsToUnlock: 2,
+      maxReviewsPerReflection: 10,
+    });
+    const reviewer = new ObjectId().toString();
+    const targets: string[] = [];
+    for (let i = 0; i < 5; i++) {
+      targets.push((await submit(new ObjectId().toString(), item)).reflectionId);
+    }
+
+    const results = await Promise.allSettled(
+      targets.map(reflectionId =>
+        service.submitReview({
+          reviewerId: reviewer,
+          reflectionId,
+          scores: scores(6),
+          helpful: false,
+        }),
+      ),
+    );
+
+    const accepted = results.filter(r => r.status === 'fulfilled').length;
+    expect(accepted).toBe(2); // never 3, even with all five racing
+
+    const written = await db
+      .collection('reflectionReviews')
+      .countDocuments({reviewerId: new ObjectId(reviewer)});
+    expect(written).toBe(2);
+  });
+
   it('caps a reviewer at the quota the instructor set', async () => {
     // requiredReviewsToUnlock = 2: a student may review exactly two peers.
     const item = await makeItem({requiredReviewsToUnlock: 2, maxReviewsPerReflection: 10});
