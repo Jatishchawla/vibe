@@ -5,7 +5,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import {ArrowRight, Loader2} from 'lucide-react';
+import {AlertCircle, ArrowRight, Loader2} from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {useStartItem, useStopItem} from '@/hooks/hooks';
 import {useCourseStore} from '@/store/course-store';
@@ -134,12 +134,21 @@ const ReflectionItemPanel = forwardRef<
     },
   }));
 
-  const {reflection: mine, isLoading} = useMyReflection(itemRef);
+  const {
+    reflection: mine,
+    isLoading,
+    isError,
+    refetch,
+  } = useMyReflection(itemRef);
   const submitReflection = useSubmitReflection(itemRef);
 
   const hasSubmitted = Boolean(mine);
-  const {reflection: peerReflection, isLoading: isQueueLoading} =
-    useNextReflectionToReview(itemRef, hasSubmitted && isReviewing);
+  const {
+    reflection: peerReflection,
+    isLoading: isQueueLoading,
+    isError: isQueueError,
+    refetch: refetchQueue,
+  } = useNextReflectionToReview(itemRef, hasSubmitted && isReviewing);
   const submitReview = useSubmitReview(itemRef);
 
   // The item container gives this a full-height box; center the card in it
@@ -164,6 +173,27 @@ const ReflectionItemPanel = forwardRef<
     );
   }
 
+  // A load failure must not look like "not submitted yet" — otherwise a student
+  // whose reflection simply failed to load would be shown the blank composer and
+  // could submit a second time. Surface it as an error with a retry instead.
+  if (isError) {
+    return shell(
+      <div className="flex flex-col items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-8 text-center">
+        <AlertCircle className="h-6 w-6 text-destructive" />
+        <div>
+          <p className="font-medium">Couldn't load your reflection</p>
+          <p className="text-sm text-muted-foreground">
+            This is a connection problem, not a lost submission. Please retry
+            before writing anything new.
+          </p>
+        </div>
+        <Button variant="outline" onClick={() => refetch()}>
+          Retry
+        </Button>
+      </div>,
+    );
+  }
+
   if (!hasSubmitted) {
     return shell(
       <ReflectionComposer
@@ -182,12 +212,24 @@ const ReflectionItemPanel = forwardRef<
   if (isReviewing) {
     return shell(
       <div className="space-y-3">
-        <PeerReviewQueue
-          reflection={peerReflection}
-          isLoading={isQueueLoading}
-          isSubmitting={submitReview.isPending}
-          onSubmit={input => submitReview.mutateAsync(input)}
-        />
+        {isQueueError ? (
+          <div className="flex flex-col items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-8 text-center">
+            <AlertCircle className="h-6 w-6 text-destructive" />
+            <p className="text-sm text-muted-foreground">
+              Couldn't load the next reflection to review.
+            </p>
+            <Button variant="outline" onClick={() => refetchQueue()}>
+              Retry
+            </Button>
+          </div>
+        ) : (
+          <PeerReviewQueue
+            reflection={peerReflection}
+            isLoading={isQueueLoading}
+            isSubmitting={submitReview.isPending}
+            onSubmit={input => submitReview.mutateAsync(input)}
+          />
+        )}
         <Button variant="ghost" onClick={() => setIsReviewing(false)}>
           Back to my reflection
         </Button>

@@ -1,4 +1,5 @@
-import {Loader2} from 'lucide-react';
+import {AlertCircle, Loader2} from 'lucide-react';
+import {Button} from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -51,7 +52,7 @@ export default function ReflectionsPanel({
   courseVersionId,
   itemId,
 }: ReflectionsPanelProps) {
-  const {items, isLoading} = useInstructorReflections(
+  const {items, isLoading, isError, refetch} = useInstructorReflections(
     courseId,
     courseVersionId,
     itemId,
@@ -67,6 +68,22 @@ export default function ReflectionsPanel({
       <div className="flex items-center justify-center gap-2 p-8 text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
         Loading reflections
+      </div>
+    );
+  }
+
+  // An error must read as an error, not as "no reflections yet" — otherwise a
+  // failed load looks identical to an empty course.
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-8 text-center">
+        <AlertCircle className="h-6 w-6 text-destructive" />
+        <p className="text-sm text-muted-foreground">
+          Couldn't load reflections for this course.
+        </p>
+        <Button variant="outline" size="sm" onClick={() => refetch()}>
+          Retry
+        </Button>
       </div>
     );
   }
