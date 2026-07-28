@@ -50,12 +50,6 @@ const isValidEmail = (email: string) => {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
 
-/**
- * Sentinel for the course-wide choice. Staff invited this way get no cohort
- * restriction; students cannot use it, since a learner joins exactly one.
- */
-const ALL_COHORTS = "__ALL__"
-
 export default function InvitePage() {
   const navigate = useNavigate()
 
@@ -82,8 +76,9 @@ export default function InvitePage() {
   const [error, setError] = useState<string>("")
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [isMessageBulk, setIsMessageBulk] = useState(false);
-  // `null` is "nothing picked yet" and blocks sending; ALL_COHORTS is a
-  // deliberate course-wide choice, sent as no cohortId at all.
+  // `null` is "nothing picked yet" and blocks sending. An invite always names
+  // exactly one cohort — course-wide access is granted by assigning cohorts on
+  // the instructors page, not by inviting without one.
   const [cohort, setCohort] = useState<string | null>(null);
 
   // handle edit or remove csv parsed emails starts
@@ -369,12 +364,6 @@ const addInviteRow = () => {
       return;
     }
 
-    const hasStudentInvite = validInvites.some(i => i.role === "STUDENT");
-    if (hasStudentInvite && cohort === ALL_COHORTS) {
-      toast.error("Students must join a single cohort — pick one, or invite them separately");
-      return;
-    }
-
     try {
       await inviteUsers.mutateAsync({
         params: {
@@ -385,7 +374,7 @@ const addInviteRow = () => {
         },
         body: {
           inviteData: validInvites,
-          cohortId: cohort === ALL_COHORTS ? undefined : cohort ?? undefined
+          cohortId: cohort ?? undefined
         },
       })
 
@@ -524,11 +513,6 @@ const addInviteRow = () => {
     }
     if (hasCohorts && !cohort) {
       toast.error("Please select a cohort before sending invites");
-      return;
-    }
-    // CSV rows are always students, so course-wide is not a valid target.
-    if (cohort === ALL_COHORTS) {
-      toast.error("Students must join a single cohort — select one to upload a CSV");
       return;
     }
 
@@ -801,7 +785,6 @@ const hasInvalidEmail = inviteEmails.some(
                         {c.name}
                       </SelectItem>
                     ))}
-                    <SelectItem value={ALL_COHORTS}>All cohorts</SelectItem>
                   </SelectContent>
                 </Select>
               )}
