@@ -884,6 +884,7 @@ export class EnrollmentController {
           contentCounts: enrollment.contentCounts,
           cohortId: enrollment.cohortId,
           cohortName: enrollment.cohortName,
+          assignedCohortIds: enrollment.assignedCohortIds || [],
           id: enrollment._id,
         }))
         .sort((a, b) => {

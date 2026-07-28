@@ -1759,6 +1759,14 @@ export class EnrollmentRepository {
         cohortName: {
           $cond: [{ $ifNull: ['$cohort.name', false] }, '$cohort.name', null],
         },
+        // Staff scope. Empty means unscoped — course-wide — not "none".
+        assignedCohortIds: {
+          $map: {
+            input: { $ifNull: ['$assignedCohortIds', []] },
+            as: 'assignedCohortId',
+            in: { $toString: '$$assignedCohortId' },
+          },
+        },
       },
     });
 

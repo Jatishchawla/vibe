@@ -245,6 +245,17 @@ export class EnrollmentDataResponse {
   @IsOptional()
   cohortName?: string;
 
+  @JSONSchema({
+    description:
+      'For staff, the cohorts this enrollment is confined to. Empty means unscoped — the whole course version.',
+    type: 'array',
+    items: {type: 'string'},
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({each: true})
+  assignedCohortIds?: string[];
+
   @IsOptional()
   hpSystem?: boolean;
 }
