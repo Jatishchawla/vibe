@@ -352,7 +352,9 @@ export class EnrollmentService extends BaseService {
       courseId,
       courseVersionId,
     );
-    const studentCohortId = enrollment?.cohortId?.toString();
+    const studentCohortId = enrollment?.isDeleted
+      ? undefined
+      : enrollment?.cohortId?.toString();
 
     const inScope =
       studentCohortId && scope.some(id => id.toString() === studentCohortId);
@@ -386,7 +388,10 @@ export class EnrollmentService extends BaseService {
         undefined,
         session,
       );
-      if (!enrollment) {
+      // findAnyEnrollment matches soft-deleted rows, but the update below does
+      // not — without this the call would validate against a removed
+      // enrollment, write nothing, and report success.
+      if (!enrollment || enrollment.isDeleted) {
         throw new NotFoundError(
           'Enrollment not found for the user in the specified course version',
         );

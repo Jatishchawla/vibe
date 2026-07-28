@@ -383,7 +383,7 @@ export class InviteService extends BaseService {
     courseId: string,
     courseVersionId: string,
     cohortId?: string,
-    senderIsAdmin = false,
+    courseWideStaffAllowed = false,
   ): Promise<InviteResult[]> {
     // Get Course Details (outside transaction)
     const course = await this.courseRepo.read(courseId.toString());
@@ -447,10 +447,12 @@ export class InviteService extends BaseService {
       }
     }
 
-    // Staff may be invited course-wide, but granting reach over every cohort
-    // is an administrator's call — otherwise an instructor confined to one
-    // cohort could mint a colleague who is confined to none.
-    if (courseVersion.cohorts?.length > 0 && !cohortId && !senderIsAdmin) {
+    // Staff may be invited course-wide, but reach over every cohort is a
+    // decision the caller must already have authorized — otherwise an
+    // instructor confined to one cohort could mint a colleague confined to
+    // none. Controllers grant it to admins; system-initiated invites, which
+    // have no sender to check, grant it at their own call site.
+    if (courseVersion.cohorts?.length > 0 && !cohortId && !courseWideStaffAllowed) {
       throw new ForbiddenError(
         'Only an administrator can invite staff across all cohorts. Select a cohort.',
       );
@@ -575,7 +577,7 @@ export class InviteService extends BaseService {
     courseVersionId: string,
     role: EnrollmentRole,
     cohortId?: string,
-    senderIsAdmin = false,
+    courseWideStaffAllowed = false,
   ): Promise<string> {
     const versionStatus =
       await this.courseRepo.getCourseVersionStatus(courseVersionId);
@@ -595,7 +597,7 @@ export class InviteService extends BaseService {
           'Course version contains cohorts, student must choose a cohort',
         );
       }
-      if (!senderIsAdmin) {
+      if (!courseWideStaffAllowed) {
         throw new ForbiddenError(
           'Only an administrator can invite staff across all cohorts. Select a cohort.',
         );

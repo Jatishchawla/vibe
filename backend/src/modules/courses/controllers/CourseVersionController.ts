@@ -215,11 +215,17 @@ Accessible to:
     // Cohorts the caller cannot act on must not reach the client: this
     // response is what populates every cohort dropdown, the invite dialog
     // included.
+    //
+    // Deliberately resolved without the request's `cohortId`. Here that value
+    // is a hint for finding the caller's enrollment, not a data filter — the
+    // version content is the same for every cohort — and the store-persisted
+    // value clients send goes stale (a moved student, an old browser). Passing
+    // it would turn a stale hint into a 403 on the course page, which is the
+    // #1081 lockout by another route.
     const scope = this.cohortScopeService.resolve(
       authenticatedUser,
       retrievedCourseVersion.courseId.toString(),
       versionId,
-      cohortId,
     );
     (retrievedCourseVersion as any).cohortDetails = filterCohortDetails(
       (retrievedCourseVersion as any).cohortDetails,
