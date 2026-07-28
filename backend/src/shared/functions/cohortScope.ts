@@ -48,6 +48,21 @@ export function cohortScopeIds(scope: CohortScope): ObjectId[] | null {
   return scope?.cohortIds ?? null;
 }
 
+/**
+ * Narrow a hydrated `cohortDetails` list to the caller's scope. Every cohort
+ * picker in the UI — including the invite dialog's — is populated from this
+ * list, so filtering it here is what keeps other cohorts out of the dropdowns.
+ */
+export function filterCohortDetails<T extends {id: string}>(
+  details: T[] | undefined,
+  scope: CohortScope,
+): T[] | undefined {
+  const ids = cohortScopeIds(scope);
+  if (!details || ids === null) return details;
+  const allowed = new Set(ids.map(id => id.toString()));
+  return details.filter(cohort => allowed.has(cohort.id));
+}
+
 const UNRESTRICTED: CohortScope = {cohortIds: null};
 
 /**
