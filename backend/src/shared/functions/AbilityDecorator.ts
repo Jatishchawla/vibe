@@ -37,18 +37,20 @@ function normalizeEnrollmentRole(
 /**
  * Derive the cohorts an enrollment confines its holder to.
  *
- * Staff fail *closed*: an unassigned instructor resolves to `[]` and therefore
- * sees nothing. Students are pinned to their own cohort so a client-supplied
- * `cohortId` can never widen them — but a student whose row predates cohorts
- * (`cohortId` absent) stays unscoped, because tightening those would lock
- * legacy learners out of courses that have no cohorts at all.
+ * Staff fail *open*: an instructor with no assignment stays unscoped and keeps
+ * the course-wide reach they have today, so the wall goes up only once an
+ * administrator assigns cohorts. Students are pinned to their own cohort so a
+ * client-supplied `cohortId` can never widen them — but a student whose row
+ * predates cohorts (`cohortId` absent) stays unscoped, because tightening
+ * those would lock legacy learners out of courses that have no cohorts.
  */
 function resolveEnrollmentCohorts(
   role: AuthenticatedUserEnrollements['role'],
   enrollment: {cohortId?: unknown; assignedCohortIds?: unknown[]},
 ): string[] | null {
   if (COHORT_SCOPED_ROLES.has(role)) {
-    return (enrollment.assignedCohortIds ?? []).map(id => id.toString());
+    const assigned = enrollment.assignedCohortIds ?? [];
+    return assigned.length > 0 ? assigned.map(id => id.toString()) : null;
   }
   if (role === 'STUDENT') {
     return enrollment.cohortId ? [enrollment.cohortId.toString()] : null;

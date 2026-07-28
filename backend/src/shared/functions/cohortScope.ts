@@ -1,9 +1,7 @@
 import {ObjectId} from 'mongodb';
 import {BadRequestError, ForbiddenError} from 'routing-controllers';
-import {inject, injectable} from 'inversify';
+import {injectable} from 'inversify';
 import {AuthenticatedUser} from '#root/shared/interfaces/models.js';
-import {ICourseRepository} from '#root/shared/database/interfaces/ICourseRepository.js';
-import {GLOBAL_TYPES} from '#root/types.js';
 
 /**
  * Roles whose reach is confined to explicitly assigned cohorts. MANAGER and TA
@@ -92,51 +90,36 @@ const UNRESTRICTED: CohortScope = {cohortIds: null};
  */
 @injectable()
 export class CohortScopeService {
-  constructor(
-    @inject(GLOBAL_TYPES.CourseRepo)
-    private readonly courseRepo: ICourseRepository,
-  ) {}
-
-  async resolve(
+  resolve(
     user: AuthenticatedUser,
     courseId: string,
     versionId: string,
     requestedCohortId?: string,
-  ): Promise<CohortScope> {
+  ): CohortScope {
     const allowed = this.allowedCohortIds(user, courseId, versionId);
 
-    if (allowed === null) {
-      if (!requestedCohortId) return UNRESTRICTED;
-      return {cohortIds: [toObjectId(requestedCohortId)]};
-    }
-
-    if (allowed.length === 0) {
-      // Nothing assigned. Distinguish "this version has no cohorts, so there
-      // is nothing to wall off" from "an admin has not assigned any yet",
-      // which must fail loudly rather than look like an empty course.
-      if (await this.versionHasCohorts(versionId)) {
-        throw new ForbiddenError(
-          'You have no cohorts assigned for this course version. Ask an administrator to assign one.',
-        );
-      }
-      return UNRESTRICTED;
-    }
-
-    if (requestedCohortId) {
+    if (allowed !== null && requestedCohortId) {
       if (!allowed.includes(requestedCohortId)) {
         throw new ForbiddenError(
           'You do not have access to the requested cohort',
         );
       }
+    }
+
+    if (requestedCohortId) {
       return {cohortIds: [toObjectId(requestedCohortId)]};
     }
 
-    return {cohortIds: allowed.map(toObjectId)};
+    return allowed === null ? UNRESTRICTED : {cohortIds: allowed.map(toObjectId)};
   }
 
   /**
    * Cohorts allowed across every enrollment the caller holds on this version,
-   * or `null` when at least one of them is cohort-agnostic.
+   * or `null` when the caller is not confined at all.
+   *
+   * Unconfined covers admins, cohort-agnostic roles, staff with no assignment,
+   * and callers holding no enrollment here — for the last of those, CASL is
+   * already the gate, so widening is not this function's job.
    */
   allowedCohortIds(
     user: AuthenticatedUser,
@@ -148,15 +131,11 @@ export class CohortScopeService {
     const matching = user.enrollments.filter(
       e => e.courseId === courseId && e.versionId === versionId,
     );
-    if (matching.length === 0) return [];
+    if (matching.length === 0) return null;
     if (matching.some(e => e.cohortIds === null)) return null;
 
-    return [...new Set(matching.flatMap(e => e.cohortIds ?? []))];
-  }
-
-  private async versionHasCohorts(versionId: string): Promise<boolean> {
-    const version = await this.courseRepo.readVersion(versionId);
-    return (version?.cohorts?.length ?? 0) > 0;
+    const union = [...new Set(matching.flatMap(e => e.cohortIds ?? []))];
+    return union.length > 0 ? union : null;
   }
 }
 

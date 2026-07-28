@@ -16,13 +16,6 @@ const VERSION_ID = new ObjectId().toString();
 const COHORT_A = new ObjectId().toString();
 const COHORT_B = new ObjectId().toString();
 
-/** Course repo stub — the resolver only asks whether the version has cohorts. */
-function courseRepoWith(cohorts: string[]) {
-  return {
-    readVersion: async () => ({cohorts: cohorts.map(id => new ObjectId(id))}),
-  } as any;
-}
-
 function user(
   overrides: Partial<AuthenticatedUser> & {
     enrollments?: AuthenticatedUser['enrollments'];
@@ -47,11 +40,11 @@ describe('CohortScopeService.resolve', () => {
   let service: CohortScopeService;
 
   beforeEach(() => {
-    service = new CohortScopeService(courseRepoWith([COHORT_A, COHORT_B]));
+    service = new CohortScopeService();
   });
 
-  it('leaves an admin unrestricted', async () => {
-    const scope = await service.resolve(
+  it('leaves an admin unrestricted', () => {
+    const scope = service.resolve(
       user({globalRole: 'admin'}),
       COURSE_ID,
       VERSION_ID,
@@ -59,8 +52,8 @@ describe('CohortScopeService.resolve', () => {
     expect(cohortScopeIds(scope)).toBeNull();
   });
 
-  it('narrows an admin to a cohort they explicitly ask for', async () => {
-    const scope = await service.resolve(
+  it('narrows an admin to a cohort they explicitly ask for', () => {
+    const scope = service.resolve(
       user({globalRole: 'admin'}),
       COURSE_ID,
       VERSION_ID,
@@ -69,8 +62,8 @@ describe('CohortScopeService.resolve', () => {
     expect(cohortScopeIds(scope)?.map(String)).toEqual([COHORT_B]);
   });
 
-  it('confines an instructor to their assigned cohorts', async () => {
-    const scope = await service.resolve(
+  it('confines an instructor to their assigned cohorts', () => {
+    const scope = service.resolve(
       user({enrollments: [enrollment('INSTRUCTOR', [COHORT_A])]}),
       COURSE_ID,
       VERSION_ID,
@@ -78,39 +71,39 @@ describe('CohortScopeService.resolve', () => {
     expect(cohortScopeIds(scope)?.map(String)).toEqual([COHORT_A]);
   });
 
-  it("refuses a cohort the instructor was not assigned", async () => {
-    await expect(
+  it('refuses a cohort the instructor was not assigned', () => {
+    expect(() =>
       service.resolve(
         user({enrollments: [enrollment('INSTRUCTOR', [COHORT_A])]}),
         COURSE_ID,
         VERSION_ID,
         COHORT_B,
       ),
-    ).rejects.toBeInstanceOf(ForbiddenError);
+    ).toThrow(ForbiddenError);
   });
 
-  it('fails closed for an unassigned instructor when the version has cohorts', async () => {
-    await expect(
-      service.resolve(
-        user({enrollments: [enrollment('INSTRUCTOR', [])]}),
-        COURSE_ID,
-        VERSION_ID,
-      ),
-    ).rejects.toBeInstanceOf(ForbiddenError);
-  });
-
-  it('leaves an unassigned instructor unrestricted when the version has no cohorts', async () => {
-    const scope = await new CohortScopeService(courseRepoWith([])).resolve(
-      user({enrollments: [enrollment('INSTRUCTOR', [])]}),
+  it('fails open for an instructor with no assignment', () => {
+    const scope = service.resolve(
+      user({enrollments: [enrollment('INSTRUCTOR', null)]}),
       COURSE_ID,
       VERSION_ID,
     );
     expect(cohortScopeIds(scope)).toBeNull();
   });
 
-  it('keeps MANAGER and TA cohort-agnostic', async () => {
+  it('lets an unassigned instructor still request one cohort', () => {
+    const scope = service.resolve(
+      user({enrollments: [enrollment('INSTRUCTOR', null)]}),
+      COURSE_ID,
+      VERSION_ID,
+      COHORT_B,
+    );
+    expect(cohortScopeIds(scope)?.map(String)).toEqual([COHORT_B]);
+  });
+
+  it('keeps MANAGER and TA cohort-agnostic', () => {
     for (const role of ['MANAGER', 'TA'] as const) {
-      const scope = await service.resolve(
+      const scope = service.resolve(
         user({enrollments: [enrollment(role, null)]}),
         COURSE_ID,
         VERSION_ID,
@@ -119,25 +112,19 @@ describe('CohortScopeService.resolve', () => {
     }
   });
 
-  it('pins a student to their own cohort and ignores a wider request', async () => {
-    await expect(
+  it('pins a student to their own cohort and refuses a wider request', () => {
+    expect(() =>
       service.resolve(
         user({enrollments: [enrollment('STUDENT', [COHORT_A])]}),
         COURSE_ID,
         VERSION_ID,
         COHORT_B,
       ),
-    ).rejects.toBeInstanceOf(ForbiddenError);
+    ).toThrow(ForbiddenError);
   });
 
-  it('denies a caller with no enrollment on the version', async () => {
-    await expect(
-      service.resolve(user(), COURSE_ID, VERSION_ID),
-    ).rejects.toBeInstanceOf(ForbiddenError);
-  });
-
-  it('unions cohorts when a caller holds several enrollments on the version', async () => {
-    const scope = await service.resolve(
+  it('unions cohorts when a caller holds several enrollments on the version', () => {
+    const scope = service.resolve(
       user({
         enrollments: [
           enrollment('INSTRUCTOR', [COHORT_A]),
@@ -152,20 +139,22 @@ describe('CohortScopeService.resolve', () => {
     );
   });
 
-  it('ignores enrollments on other course versions', async () => {
-    const otherVersion = {
-      courseId: COURSE_ID,
-      versionId: new ObjectId().toString(),
-      role: 'INSTRUCTOR' as const,
-      cohortIds: [COHORT_B],
-    };
-    await expect(
-      service.resolve(
-        user({enrollments: [otherVersion]}),
-        COURSE_ID,
-        VERSION_ID,
-      ),
-    ).rejects.toBeInstanceOf(ForbiddenError);
+  it('ignores an assignment held on a different course version', () => {
+    const scope = service.resolve(
+      user({
+        enrollments: [
+          {
+            courseId: COURSE_ID,
+            versionId: new ObjectId().toString(),
+            role: 'INSTRUCTOR' as const,
+            cohortIds: [COHORT_B],
+          },
+        ],
+      }),
+      COURSE_ID,
+      VERSION_ID,
+    );
+    expect(cohortScopeIds(scope)).toBeNull();
   });
 });
 

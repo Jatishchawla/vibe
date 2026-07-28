@@ -215,7 +215,7 @@ Accessible to:
     // Cohorts the caller cannot act on must not reach the client: this
     // response is what populates every cohort dropdown, the invite dialog
     // included.
-    const scope = await this.cohortScopeService.resolve(
+    const scope = this.cohortScopeService.resolve(
       authenticatedUser,
       retrievedCourseVersion.courseId.toString(),
       versionId,

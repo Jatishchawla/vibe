@@ -88,7 +88,7 @@ export class BulkUnenrollBody {
 export class AssignCohortsBody {
   @JSONSchema({
     description:
-      'Cohorts of this course version the instructor may see. Replaces the current assignment; an empty array revokes all cohort access.',
+      'Cohorts of this course version the instructor may see. Replaces the current assignment; an empty array clears it, returning the instructor to course-wide access.',
     example: ['60d5ec49b3f1c8e4a8f8b8d2'],
     type: 'array',
     items: {type: 'string'},

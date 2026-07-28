@@ -105,7 +105,7 @@ export class EnrollmentController {
     versionId: string,
     requestedCohortId?: string,
   ): Promise<string | undefined> {
-    const scope = await this.cohortScopeService.resolve(
+    const scope = this.cohortScopeService.resolve(
       authenticatedUser,
       courseId,
       versionId,
@@ -459,7 +459,7 @@ export class EnrollmentController {
   @OpenAPI({
     summary: 'Assign cohorts to an instructor',
     description:
-      "Replaces the set of cohorts an instructor may see on this course version. An empty array revokes all cohort access. Restricted to admins and the course's managers.",
+      "Replaces the set of cohorts an instructor may see on this course version. An empty array clears the assignment, returning them to course-wide access. Restricted to admins and the course's managers.",
   })
   @Authorized()
   @Patch('/:userId/enrollments/courses/:courseId/versions/:versionId/cohorts')
@@ -820,7 +820,7 @@ export class EnrollmentController {
       throw new BadRequestError('Page and limit must be positive integers.');
     }
 
-    const scope = await this.cohortScopeService.resolve(
+    const scope = this.cohortScopeService.resolve(
       authenticatedUser,
       courseId,
       versionId,
@@ -1143,7 +1143,7 @@ export class EnrollmentController {
         'You do not have permission to view quiz scores for this course',
       );
     }
-    const scope = await this.cohortScopeService.resolve(
+    const scope = this.cohortScopeService.resolve(
       authenticatedUser,
       courseId,
       versionId,
@@ -1193,7 +1193,7 @@ export class EnrollmentController {
 
     // This export can only express one cohort, so a scoped caller holding
     // several has to pick rather than silently receive one of them.
-    const scope = await this.cohortScopeService.resolve(
+    const scope = this.cohortScopeService.resolve(
       authenticatedUser,
       courseId,
       versionId,

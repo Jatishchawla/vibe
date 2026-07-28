@@ -93,7 +93,7 @@ export class InviteController {
     const {inviteData, cohortId} = body;
 
     // A sender may only place learners into a cohort they hold themselves.
-    await this.cohortScopeService.resolve(
+    this.cohortScopeService.resolve(
       authenticatedUser,
       courseId,
       versionId,
@@ -184,7 +184,7 @@ export class InviteController {
 
     // A shared link enrolls whoever opens it, so the target cohort has to be
     // inside the generator's scope before the link exists.
-    await this.cohortScopeService.resolve(
+    this.cohortScopeService.resolve(
       authenticatedUser,
       courseId,
       versionId,
