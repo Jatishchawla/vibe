@@ -6,6 +6,15 @@ import {ICourseRepository} from '#root/shared/database/interfaces/ICourseReposit
 import {GLOBAL_TYPES} from '#root/types.js';
 
 /**
+ * Roles whose reach is confined to explicitly assigned cohorts. MANAGER and TA
+ * are deliberately excluded — they retain course/version-wide reach.
+ */
+export const COHORT_SCOPED_ROLES: ReadonlySet<string> = new Set([
+  'INSTRUCTOR',
+  'STAFF',
+]);
+
+/**
  * The set of cohorts a caller may read or act on for one course version.
  *
  * `cohortIds: null` means **unrestricted** — admins, cohort-agnostic roles

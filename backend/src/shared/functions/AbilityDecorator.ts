@@ -3,6 +3,7 @@ import {AuthenticatedUser, AuthenticatedUserEnrollements} from '../interfaces/mo
 import {FirebaseAuthService} from '#root/modules/auth/services/FirebaseAuthService.js';
 import {EnrollmentService} from '#root/modules/users/services/EnrollmentService.js';
 import {MongoAbility} from '@casl/ability';
+import {COHORT_SCOPED_ROLES} from './cohortScope.js';
 
 const VALID_ENROLLMENT_ROLES = ['STUDENT', 'INSTRUCTOR', 'MANAGER', 'TA', 'STAFF'];
 
@@ -32,12 +33,6 @@ function normalizeEnrollmentRole(
     ? (upper as AuthenticatedUserEnrollements['role'])
     : null;
 }
-
-/**
- * Roles whose reach is confined to explicitly assigned cohorts. MANAGER and TA
- * are deliberately excluded — they retain course/version-wide reach.
- */
-const COHORT_SCOPED_ROLES: ReadonlySet<string> = new Set(['INSTRUCTOR', 'STAFF']);
 
 /**
  * Derive the cohorts an enrollment confines its holder to.

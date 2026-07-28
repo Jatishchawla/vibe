@@ -44,6 +44,7 @@ import {
   ISubmission,
 } from '#root/modules/quizzes/interfaces/index.js';
 import { Cohort } from '#root/modules/courses/classes/index.js';
+import { COHORT_SCOPED_ROLES } from '#root/shared/functions/cohortScope.js';
 import { SETTING_TYPES } from '#root/modules/setting/types.js';
 import { HP_SYSTEM_TYPES } from '#root/modules/hpSystem/types.js';
 import { LedgerRepository } from '#root/modules/hpSystem/repositories/index.js';
@@ -318,6 +319,67 @@ export class EnrollmentService extends BaseService {
       // }
 
       return existingEnrollment;
+    });
+  }
+
+  /**
+   * Replace the cohorts a staff member is confined to on a course version.
+   *
+   * Only cohorts the version actually owns can be assigned, so an assignment
+   * can never reference another course's cohort — which is what makes the
+   * resolved scope safe to use as a filter without re-checking downstream.
+   */
+  async assignCohorts(
+    userId: string,
+    courseId: string,
+    courseVersionId: string,
+    cohortIds: string[],
+  ): Promise<{cohortIds: string[]}> {
+    return this._withTransaction(async (session: ClientSession) => {
+      const enrollment = await this.enrollmentRepo.findAnyEnrollment(
+        userId,
+        courseId,
+        courseVersionId,
+        undefined,
+        session,
+      );
+      if (!enrollment) {
+        throw new NotFoundError(
+          'Enrollment not found for the user in the specified course version',
+        );
+      }
+      if (!COHORT_SCOPED_ROLES.has(enrollment.role)) {
+        throw new BadRequestError(
+          `Cohorts can only be assigned to ${[...COHORT_SCOPED_ROLES].join('/')} enrollments, not ${enrollment.role}`,
+        );
+      }
+
+      const courseVersion = await this.courseRepo.readVersion(
+        courseVersionId,
+        session,
+      );
+      if (!courseVersion) throw new NotFoundError('Course version not found');
+
+      const versionCohorts = new Set(
+        (courseVersion.cohorts ?? []).map(id => id.toString()),
+      );
+      const unknown = cohortIds.filter(id => !versionCohorts.has(id));
+      if (unknown.length > 0) {
+        throw new BadRequestError(
+          `Cohort(s) ${unknown.join(', ')} do not belong to this course version`,
+        );
+      }
+
+      const deduped = [...new Set(cohortIds)];
+      await this.enrollmentRepo.updateAssignedCohorts(
+        userId,
+        courseId,
+        courseVersionId,
+        deduped.map(id => new ObjectId(id)),
+        session,
+      );
+
+      return {cohortIds: deduped};
     });
   }
 

@@ -85,6 +85,30 @@ export class BulkUnenrollBody {
   cohortId?: string
 }
 
+export class AssignCohortsBody {
+  @JSONSchema({
+    description:
+      'Cohorts of this course version the instructor may see. Replaces the current assignment; an empty array revokes all cohort access.',
+    example: ['60d5ec49b3f1c8e4a8f8b8d2'],
+    type: 'array',
+    items: {type: 'string'},
+  })
+  @IsArray()
+  @IsMongoId({each: true})
+  cohortIds: string[];
+}
+
+export class AssignCohortsResponse {
+  @JSONSchema({
+    description: 'Cohorts now assigned to the instructor',
+    type: 'array',
+    items: {type: 'string'},
+  })
+  @IsArray()
+  @IsString({each: true})
+  cohortIds: string[];
+}
+
 export class ChangeEnrollmentStatusBody {
   @JSONSchema({
     description: 'New status for the enrollment',

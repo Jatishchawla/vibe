@@ -211,6 +211,37 @@ export class EnrollmentRepository {
     );
   }
 
+  /**
+   * Replace the cohorts a staff enrollment is confined to. Wholesale
+   * replacement rather than add/remove so the caller's view of the assignment
+   * is what gets stored — two admins editing concurrently cannot merge into a
+   * set neither of them chose.
+   */
+  async updateAssignedCohorts(
+    userId: string,
+    courseId: string,
+    courseVersionId: string,
+    cohortIds: ObjectId[],
+    session?: ClientSession,
+  ): Promise<IEnrollment | null> {
+    await this.init();
+
+    const result = await this.enrollmentCollection.findOneAndUpdate(
+      {
+        userId: { $in: [userId, new ObjectId(userId)] },
+        courseId: { $in: [courseId, new ObjectId(courseId)] },
+        courseVersionId: {
+          $in: [courseVersionId, new ObjectId(courseVersionId)],
+        },
+        isDeleted: { $ne: true },
+      },
+      { $set: { assignedCohortIds: cohortIds } },
+      { session, returnDocument: 'after' },
+    );
+
+    return result as IEnrollment | null;
+  }
+
   async findActiveEnrollment(
     userId: string | ObjectId,
     courseId: string,

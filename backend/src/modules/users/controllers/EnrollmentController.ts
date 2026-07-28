@@ -26,6 +26,8 @@ import {
   BulkChangeEnrollmentStatusBody,
   EthicsConsentBody,
   EthicsConsentStatusResponse,
+  AssignCohortsBody,
+  AssignCohortsResponse,
 } from '#users/classes/validators/EnrollmentValidators.js';
 import {QuizScoresExportResponseDto} from '../dtos/QuizScoresExportDto.js';
 import {EnrollmentService} from '#users/services/EnrollmentService.js';
@@ -418,6 +420,82 @@ export class EnrollmentController {
     });
 
     return response;
+  }
+
+  @OpenAPI({
+    summary: 'Assign cohorts to an instructor',
+    description:
+      "Replaces the set of cohorts an instructor may see on this course version. An empty array revokes all cohort access. Restricted to admins and the course's managers.",
+  })
+  @Authorized()
+  @Patch('/:userId/enrollments/courses/:courseId/versions/:versionId/cohorts')
+  @UseInterceptor(AuditTrailsHandler)
+  @HttpCode(200)
+  @ResponseSchema(AssignCohortsResponse, {
+    description: 'Cohort assignment updated',
+  })
+  @ResponseSchema(EnrollmentNotFoundErrorResponse, {
+    description: 'Enrollment not found for the user in the course version',
+    statusCode: 404,
+  })
+  @ResponseSchema(BadRequestErrorResponse, {
+    description: 'Cohort does not belong to the version, or role is not staff',
+    statusCode: 400,
+  })
+  async assignCohorts(
+    @Params() params: EnrollmentParams,
+    @Body() body: AssignCohortsBody,
+    @Ability(getEnrollmentAbility) {ability, user},
+    @Req() req: Request,
+  ): Promise<AssignCohortsResponse> {
+    const {userId, courseId, versionId} = params;
+
+    const enrollmentResource = subject('Enrollment', {courseId, versionId});
+    if (!ability.can(EnrollmentActions.AssignCohorts, enrollmentResource)) {
+      throw new ForbiddenError(
+        'You do not have permission to assign cohorts for this course',
+      );
+    }
+
+    const before = await this.enrollmentService.findAnyEnrollment(
+      userId,
+      courseId,
+      versionId,
+    );
+
+    const result = await this.enrollmentService.assignCohorts(
+      userId,
+      courseId,
+      versionId,
+      body.cohortIds,
+    );
+
+    setAuditTrail(req, {
+      category: AuditCategory.COHORT,
+      action: AuditAction.COHORT_UPDATE,
+      actor: {
+        id: ObjectId.createFromHexString(user._id.toString()),
+        name: `${user.firstName} ${user.lastName}`,
+        email: user.email,
+        role: user.roles,
+      },
+      context: {
+        courseId: ObjectId.createFromHexString(courseId),
+        courseVersionId: ObjectId.createFromHexString(versionId),
+        userId: ObjectId.createFromHexString(userId),
+      },
+      changes: {
+        before: {
+          assignedCohortIds: (before?.assignedCohortIds ?? []).map(id =>
+            id.toString(),
+          ),
+        },
+        after: {assignedCohortIds: result.cohortIds},
+      },
+      outcome: {status: OutComeStatus.SUCCESS},
+    });
+
+    return result;
   }
 
   @OpenAPI({
