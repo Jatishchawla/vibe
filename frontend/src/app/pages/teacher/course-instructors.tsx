@@ -42,6 +42,23 @@ export default function CourseInstructors() {
   const [draftCohortIds, setDraftCohortIds] = useState<string[]>([])
   const { assignCohorts, loading: isAssigning } = useAssignInstructorCohorts()
 
+  /**
+   * Whether a cohort assignment would actually bind this person.
+   *
+   * An admin is unrestricted by global role, and MANAGER/TA are cohort-agnostic
+   * by design — storing cohorts against any of them changes nothing, so offering
+   * the edit would display a scope that is not in force. The backend refuses
+   * the non-staff roles outright.
+   */
+  const isCohortScopable = (instructor: any) => {
+    const globalRoles = instructor.user?.roles
+    const roleList = Array.isArray(globalRoles) ? globalRoles : [globalRoles]
+    const isAdmin = roleList.some(
+      (r: unknown) => typeof r === "string" && r.toLowerCase() === "admin"
+    )
+    return !isAdmin && ["INSTRUCTOR", "STAFF"].includes(instructor.role)
+  }
+
   const openCohortDialog = (instructor: any) => {
     setInstructorBeingScoped(instructor)
     setDraftCohortIds(instructor.assignedCohortIds ?? [])
@@ -372,7 +389,14 @@ export default function CourseInstructors() {
                         <TableCell className="py-6">
                           <div className="flex flex-wrap items-center gap-1.5">
                             {(instructor.assignedCohortIds?.length ?? 0) === 0 ? (
-                              <span className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground font-medium">
+                              <span
+                                className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground font-medium"
+                                title={
+                                  isCohortScopable(instructor)
+                                    ? "No cohorts assigned — sees the whole course version"
+                                    : "This role is not confined to cohorts"
+                                }
+                              >
                                 All cohorts
                               </span>
                             ) : (
@@ -385,7 +409,7 @@ export default function CourseInstructors() {
                                 </span>
                               ))
                             )}
-                            {hasCohorts && (
+                            {hasCohorts && isCohortScopable(instructor) && (
                               <Button
                                 variant="ghost"
                                 size="sm"

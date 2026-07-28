@@ -397,6 +397,21 @@ export class EnrollmentService extends BaseService {
         );
       }
 
+      // An admin is unrestricted by global role, so a stored assignment would
+      // never be consulted. Refuse rather than record a scope that is not in
+      // force and would read on screen as though it were.
+      const target = await this.userRepo.findById(userId, session);
+      const globalRoles = Array.isArray(target?.roles)
+        ? target.roles
+        : [target?.roles];
+      if (
+        globalRoles.some(r => typeof r === 'string' && r.toLowerCase() === 'admin')
+      ) {
+        throw new BadRequestError(
+          'Administrators are not confined to cohorts, so an assignment would have no effect',
+        );
+      }
+
       const courseVersion = await this.courseRepo.readVersion(
         courseVersionId,
         session,
