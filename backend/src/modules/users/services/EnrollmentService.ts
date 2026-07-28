@@ -186,7 +186,14 @@ export class EnrollmentService extends BaseService {
         enrollmentDate: new Date(),
         percentCompleted: 0,
         completedItemsCount: 0,
-        ...(cohort ? { cohortId: new ObjectId(cohort) } : {}),
+        // A learner belongs to a cohort; staff are *scoped to* one. Same input,
+        // two different fields — putting a staff cohort in `cohortId` would
+        // make an instructor look like a member of the batch they teach.
+        ...(cohort
+          ? COHORT_SCOPED_ROLES.has(role)
+            ? { assignedCohortIds: [new ObjectId(cohort)] }
+            : { cohortId: new ObjectId(cohort) }
+          : {}),
         ...(policyAcknowledged ? { policyAcknowledgedAt: new Date() } : {}),
         ...(role === 'STUDENT' ? { hpPoints: baseHpValue } : {}),
       };

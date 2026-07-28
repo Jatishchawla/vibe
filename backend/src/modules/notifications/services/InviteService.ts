@@ -438,20 +438,23 @@ export class InviteService extends BaseService {
         );
       }
 
-      if (courseVersion.cohorts && courseVersion.cohorts.length > 0) {
-        if (!cohortId) {
-          throw new BadRequestError(
-            'Course version contains cohorts, student must choose a cohort',
-          );
-        }
-        const validCohort = courseVersion.cohorts.find(
-          c => c.toString() === cohortId,
+      // A learner joins exactly one cohort, so the choice is mandatory for
+      // them. Staff may legitimately be invited course-wide instead.
+      if (courseVersion.cohorts?.length > 0 && !cohortId) {
+        throw new BadRequestError(
+          'Course version contains cohorts, student must choose a cohort',
         );
-        if (!validCohort) {
-          throw new BadRequestError(
-            'Invalid cohort. Cohort does not exist in course version.',
-          );
-        }
+      }
+    }
+
+    if (cohortId) {
+      const validCohort = courseVersion.cohorts?.find(
+        c => c.toString() === cohortId,
+      );
+      if (!validCohort) {
+        throw new BadRequestError(
+          'Invalid cohort. Cohort does not exist in course version.',
+        );
       }
     }
 
@@ -514,7 +517,10 @@ export class InviteService extends BaseService {
           isNewUser: !user,
           expiresAt: oneWeekFromNow,
           type: InviteType.SINGLE,
-          cohortId: role === "STUDENT" && ObjectId.isValid(cohortId) ? new ObjectId(cohortId) : undefined,
+          // Kept for staff too: the cohort becomes their assigned scope on
+          // acceptance. An absent cohortId means course-wide, which is the
+          // "All cohorts" choice.
+          cohortId: ObjectId.isValid(cohortId) ? new ObjectId(cohortId) : undefined,
         });
 
         const id = await this.inviteRepo.create(invite, session);

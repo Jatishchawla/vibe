@@ -45,17 +45,16 @@ import type { EmailInvite, EnrollmentRole, InviteStatus, InviteResult } from "@/
 import { useNavigate, redirect } from "@tanstack/react-router"
 import { Pagination } from "@/components/ui/Pagination"
 import CourseBackButton from "./CourseBackButton";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-} from "@/components/ui/dropdown-menu";
 
 const isValidEmail = (email: string) => {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
+
+/**
+ * Sentinel for the course-wide choice. Staff invited this way get no cohort
+ * restriction; students cannot use it, since a learner joins exactly one.
+ */
+const ALL_COHORTS = "__ALL__"
 
 export default function InvitePage() {
   const navigate = useNavigate()
@@ -83,6 +82,8 @@ export default function InvitePage() {
   const [error, setError] = useState<string>("")
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [isMessageBulk, setIsMessageBulk] = useState(false);
+  // `null` is "nothing picked yet" and blocks sending; ALL_COHORTS is a
+  // deliberate course-wide choice, sent as no cohortId at all.
   const [cohort, setCohort] = useState<string | null>(null);
 
   // handle edit or remove csv parsed emails starts
@@ -155,6 +156,10 @@ export default function InvitePage() {
 
   // Add course version data hook to check structure
   const { data: courseVersion, isLoading: versionLoading } = useCourseVersionById(versionId || "")
+
+  // Only cohorts the caller is scoped to reach the client, so this doubles as
+  // "does the sender have a cohort to choose from".
+  const hasCohorts = (courseVersion?.cohortDetails?.length ?? 0) > 0
 
   const inviteUsers = useInviteUsers()
   const resendInvite = useResendInvite()
@@ -356,9 +361,17 @@ const addInviteRow = () => {
       return
     }
 
+    // Applies to every role, not just students: an instructor invited without
+    // a cohort silently lands course-wide, which is not something to do by
+    // accident.
+    if (hasCohorts && !cohort) {
+      toast.error("Please select a cohort before sending invites");
+      return;
+    }
+
     const hasStudentInvite = validInvites.some(i => i.role === "STUDENT");
-    if (hasStudentInvite && courseVersion?.cohortDetails?.length > 0 && !cohort) {
-      toast.error("Please select a cohort before sending invites for students");
+    if (hasStudentInvite && cohort === ALL_COHORTS) {
+      toast.error("Students must join a single cohort — pick one, or invite them separately");
       return;
     }
 
@@ -372,7 +385,7 @@ const addInviteRow = () => {
         },
         body: {
           inviteData: validInvites,
-          cohortId: cohort
+          cohortId: cohort === ALL_COHORTS ? undefined : cohort ?? undefined
         },
       })
 
@@ -509,8 +522,13 @@ const addInviteRow = () => {
       toast.error("No emails to send")
       return
     }
-    if(courseVersion?.cohortDetails?.length > 0 && !cohort){  
+    if (hasCohorts && !cohort) {
       toast.error("Please select a cohort before sending invites");
+      return;
+    }
+    // CSV rows are always students, so course-wide is not a valid target.
+    if (cohort === ALL_COHORTS) {
+      toast.error("Students must join a single cohort — select one to upload a CSV");
       return;
     }
 
@@ -529,7 +547,7 @@ const addInviteRow = () => {
         },
         body: {
           inviteData,
-          cohortId: cohort
+          cohortId: cohort ?? undefined
         },
       })
 
@@ -634,36 +652,6 @@ const hasInvalidEmail = inviteEmails.some(
           <Badge variant="outline" className="ml-2">
             {course.name}
           </Badge>
-        )}
-        {courseVersion?.cohortDetails?.length > 0 && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                className="ml-2 px-3 py-2 text-sm"
-              >
-                                <Layers className="h-4 w-4 text-muted-foreground" />
-        {cohort ? courseVersion?.cohortDetails?.find(c => c.id === cohort)?.name : "Select Cohort"}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuRadioGroup
-                value={cohort ?? ""}
-                onValueChange={(value) => {
-                  setCohort(value);
-                }}
-              >
-                {courseVersion?.cohortDetails?.map((cohort) => (
-                  <DropdownMenuRadioItem
-                      key={cohort.id}
-                      value={cohort.id}
-                    >
-                      {cohort.name}
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
         )}
       </div>
 
@@ -794,7 +782,30 @@ const hasInvalidEmail = inviteEmails.some(
               {" "}valid email(s) ready to send
             </div>
 
-            <div className="flex space-x-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {hasCohorts && (
+                <Select
+                  value={cohort ?? ""}
+                  onValueChange={(value) => setCohort(value)}
+                >
+                  <SelectTrigger
+                    aria-label="Cohort to invite into"
+                    className={`h-9 w-[190px] ${cohort ? "" : "border-destructive text-destructive"}`}
+                  >
+                    <Layers className="h-4 w-4 mr-2 shrink-0 opacity-70" />
+                    <SelectValue placeholder="Select cohort *" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {courseVersion?.cohortDetails?.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value={ALL_COHORTS}>All cohorts</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+
               <Button
                 variant="outline"
                 onClick={() => setInviteEmails([{ email: "", role: "STUDENT" }])}
@@ -827,7 +838,25 @@ const hasInvalidEmail = inviteEmails.some(
                 )}
               </Button> */}
 
-              <Button className="min-w-[120px]" onClick={() => setShowConfirmationModal(true)} disabled={inviteUsers.isPending || inviteEmails.filter(invite => invite.email.trim() !== "").length === 0 || !isVersionActive} title={!isVersionActive ? "Cannot send invites to archived courses" : undefined}>Send Invites</Button>
+              <Button
+                className="min-w-[120px]"
+                onClick={() => setShowConfirmationModal(true)}
+                disabled={
+                  inviteUsers.isPending ||
+                  inviteEmails.filter(invite => invite.email.trim() !== "").length === 0 ||
+                  !isVersionActive ||
+                  (hasCohorts && !cohort)
+                }
+                title={
+                  !isVersionActive
+                    ? "Cannot send invites to archived courses"
+                    : hasCohorts && !cohort
+                      ? "Select a cohort first"
+                      : undefined
+                }
+              >
+                Send Invites
+              </Button>
             </div>
           </div>
         </CardContent>
