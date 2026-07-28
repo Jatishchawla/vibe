@@ -323,6 +323,42 @@ export class EnrollmentService extends BaseService {
   }
 
   /**
+   * Resolve which cohort a per-student read should run against, refusing the
+   * read when that student sits outside the caller's cohort scope.
+   *
+   * Single-student endpoints cannot simply filter by an `$in` — there is
+   * exactly one relevant cohort, the student's own. Omitting `cohortId` used
+   * to make the lookup cohort-agnostic, which is how a scoped instructor could
+   * read a learner belonging to somebody else's cohort.
+   */
+  async resolveStudentCohort(
+    userId: string,
+    courseId: string,
+    courseVersionId: string,
+    scope: ObjectId[] | null,
+    requestedCohortId?: string,
+  ): Promise<string | undefined> {
+    if (scope === null) return requestedCohortId;
+
+    const enrollment = await this.enrollmentRepo.findAnyEnrollment(
+      userId,
+      courseId,
+      courseVersionId,
+    );
+    const studentCohortId = enrollment?.cohortId?.toString();
+
+    const inScope =
+      studentCohortId && scope.some(id => id.toString() === studentCohortId);
+    if (!inScope) {
+      throw new ForbiddenError(
+        'This student is not in a cohort you have access to',
+      );
+    }
+
+    return requestedCohortId ?? studentCohortId;
+  }
+
+  /**
    * Replace the cohorts a staff member is confined to on a course version.
    *
    * Only cohorts the version actually owns can be assigned, so an assignment
@@ -1121,7 +1157,7 @@ export class EnrollmentService extends BaseService {
     sortOrder: 'asc' | 'desc',
     filter: string,
     statusTab: 'ACTIVE' | 'INACTIVE' = 'ACTIVE',
-    cohort?: string,
+    cohortScope?: ObjectId[] | null,
   ) {
     return this._withTransaction(async (session: ClientSession) => {
       const courseVersion = await this.courseRepo.readVersion(
@@ -1148,8 +1184,7 @@ export class EnrollmentService extends BaseService {
           sortOrder,
           filter,
           statusTab,
-          cohort,
-          (courseVersion.cohorts || []).map(cohort => new ObjectId(cohort)),
+          cohortScope,
           session,
         );
       return enrollmentsData;
@@ -1453,6 +1488,7 @@ export class EnrollmentService extends BaseService {
     versionId: string,
     statusTab: 'ACTIVE' | 'INACTIVE' = 'ACTIVE',
     cohortId?: string,
+    scopedCohortIds?: ObjectId[] | null,
   ): Promise<QuizScoresExportResponseDto> {
     try {
       // Verify course and version exist in a single transaction
@@ -1480,12 +1516,15 @@ export class EnrollmentService extends BaseService {
             throw new NotFoundError('Cohort not found in this course version');
           }
           cohortIds = [cohortId];
-          cohorts = await this.courseRepo.getCohortsByIds(cohortIds);
+        } else if (scopedCohortIds) {
+          // "No cohort requested" means every cohort the caller holds, not
+          // every cohort on the version.
+          cohortIds = scopedCohortIds.map(id => id.toString());
         } else {
           // Get all cohorts for the version
           cohortIds = version.cohorts.map(id => id.toString());
-          cohorts = await this.courseRepo.getCohortsByIds(cohortIds);
         }
+        cohorts = await this.courseRepo.getCohortsByIds(cohortIds);
         cohortMap = new Map(cohorts.map(c => [c._id.toString(), c.name]));
       }
 

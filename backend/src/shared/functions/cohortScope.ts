@@ -1,5 +1,5 @@
 import {ObjectId} from 'mongodb';
-import {ForbiddenError} from 'routing-controllers';
+import {BadRequestError, ForbiddenError} from 'routing-controllers';
 import {inject, injectable} from 'inversify';
 import {AuthenticatedUser} from '#root/shared/interfaces/models.js';
 import {ICourseRepository} from '#root/shared/database/interfaces/ICourseRepository.js';
@@ -46,6 +46,24 @@ export function cohortScopeFilter(
 /** The cohort ids in a scope, or `null` when it is unrestricted. */
 export function cohortScopeIds(scope: CohortScope): ObjectId[] | null {
   return scope?.cohortIds ?? null;
+}
+
+/**
+ * Collapse a scope to a single cohort id, for the few reads that can only
+ * express one. An unrestricted caller keeps the "all cohorts" behaviour; a
+ * scoped one holding several must say which, rather than silently getting one.
+ */
+export function requireSingleCohort(
+  scope: CohortScope,
+  requestedCohortId?: string,
+): string | undefined {
+  if (requestedCohortId) return requestedCohortId;
+  const ids = cohortScopeIds(scope);
+  if (ids === null) return undefined;
+  if (ids.length === 1) return ids[0].toString();
+  throw new BadRequestError(
+    'You have access to more than one cohort — select which cohort to use',
+  );
 }
 
 /**
