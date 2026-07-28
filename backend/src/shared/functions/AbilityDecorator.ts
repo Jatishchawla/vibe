@@ -34,6 +34,34 @@ function normalizeEnrollmentRole(
 }
 
 /**
+ * Roles whose reach is confined to explicitly assigned cohorts. MANAGER and TA
+ * are deliberately excluded — they retain course/version-wide reach.
+ */
+const COHORT_SCOPED_ROLES: ReadonlySet<string> = new Set(['INSTRUCTOR', 'STAFF']);
+
+/**
+ * Derive the cohorts an enrollment confines its holder to.
+ *
+ * Staff fail *closed*: an unassigned instructor resolves to `[]` and therefore
+ * sees nothing. Students are pinned to their own cohort so a client-supplied
+ * `cohortId` can never widen them — but a student whose row predates cohorts
+ * (`cohortId` absent) stays unscoped, because tightening those would lock
+ * legacy learners out of courses that have no cohorts at all.
+ */
+function resolveEnrollmentCohorts(
+  role: AuthenticatedUserEnrollements['role'],
+  enrollment: {cohortId?: unknown; assignedCohortIds?: unknown[]},
+): string[] | null {
+  if (COHORT_SCOPED_ROLES.has(role)) {
+    return (enrollment.assignedCohortIds ?? []).map(id => id.toString());
+  }
+  if (role === 'STUDENT') {
+    return enrollment.cohortId ? [enrollment.cohortId.toString()] : null;
+  }
+  return null;
+}
+
+/**
  * Parameter decorator that builds and injects user abilities into the controller method
  * Usage: methodName(@Ability(getCourseAbility) ability: MongoAbility<any>)
  */
@@ -68,18 +96,29 @@ export function Ability(
         userId: user._id.toString(),
         globalRole: normalizeGlobalRole(user.roles),
         enrollments: enrollments
-          .map(enrollment => ({
-            courseId: enrollment.courseId.toString(),
-            versionId: enrollment.courseVersionId.toString(),
-            role: normalizeEnrollmentRole(enrollment.role),
-          }))
+          .map(enrollment => {
+            const role = normalizeEnrollmentRole(enrollment.role);
+            return {
+              courseId: enrollment.courseId.toString(),
+              versionId: enrollment.courseVersionId.toString(),
+              role,
+              cohortIds: role
+                ? resolveEnrollmentCohorts(role, enrollment)
+                : null,
+            };
+          })
           .filter(
             (e): e is AuthenticatedUserEnrollements => e.role !== null,
           ),
       };
 
-      // Build and return the ability using the provided builder function
-      return {ability: await abilityBuilder(authenticatedUser), user: user};
+      // `authenticatedUser` carries the cohort scope CASL cannot express as a
+      // static rule; controllers pass it to CohortScopeService.
+      return {
+        ability: await abilityBuilder(authenticatedUser),
+        user: user,
+        authenticatedUser,
+      };
     },
   });
 }
