@@ -41,6 +41,7 @@ import {
   useCourseVersionById,
 } from "@/hooks/hooks"
 import { useCourseStore } from "@/store/course-store"
+import { useAuthStore } from "@/store/auth-store"
 import type { EmailInvite, EnrollmentRole, InviteStatus, InviteResult } from "@/types/invite.types"
 import { useNavigate, redirect } from "@tanstack/react-router"
 import { Pagination } from "@/components/ui/Pagination"
@@ -49,6 +50,13 @@ import CourseBackButton from "./CourseBackButton";
 const isValidEmail = (email: string) => {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
+
+/**
+ * Course-wide target, sent as no cohortId at all. Offered only to admins, and
+ * only for staff invites — a learner always joins exactly one cohort. Hiding
+ * it is presentation; the backend refuses the same combination.
+ */
+const ALL_COHORTS = "__ALL__"
 
 export default function InvitePage() {
   const navigate = useNavigate()
@@ -156,6 +164,9 @@ export default function InvitePage() {
   // "does the sender have a cohort to choose from".
   const hasCohorts = (courseVersion?.cohortDetails?.length ?? 0) > 0
 
+  const { user: currentUser } = useAuthStore()
+  const isAdmin = currentUser?.role === "admin"
+
   const inviteUsers = useInviteUsers()
   const resendInvite = useResendInvite()
   const cancelInvite = useCancelInvite()
@@ -240,6 +251,19 @@ export default function InvitePage() {
   const [inviteEmails, setInviteEmails] = useState<EmailInvite[]>([
     { email: "", role: defaultRole }
   ]);
+
+  // Course-wide is an admin's call, and only for staff: a learner joins one
+  // cohort, so a single student in the batch takes the option away.
+  const invitingAnyStudent = inviteEmails.some(invite => invite.role === "STUDENT")
+  const canInviteAllCohorts = isAdmin && !invitingAnyStudent
+
+  // Adding a student after picking "All cohorts" would otherwise leave an
+  // impossible target selected behind a hidden option.
+  useEffect(() => {
+    if (cohort === ALL_COHORTS && !canInviteAllCohorts) {
+      setCohort(null)
+    }
+  }, [cohort, canInviteAllCohorts])
 
 // Handle adding new invite row
 const addInviteRow = () => {
@@ -374,7 +398,7 @@ const addInviteRow = () => {
         },
         body: {
           inviteData: validInvites,
-          cohortId: cohort ?? undefined
+          cohortId: cohort === ALL_COHORTS ? undefined : cohort ?? undefined
         },
       })
 
@@ -513,6 +537,11 @@ const addInviteRow = () => {
     }
     if (hasCohorts && !cohort) {
       toast.error("Please select a cohort before sending invites");
+      return;
+    }
+    // CSV rows are always students, so course-wide is never a valid target.
+    if (cohort === ALL_COHORTS) {
+      toast.error("Select a single cohort — students cannot be invited across all cohorts");
       return;
     }
 
@@ -785,6 +814,9 @@ const hasInvalidEmail = inviteEmails.some(
                         {c.name}
                       </SelectItem>
                     ))}
+                    {canInviteAllCohorts && (
+                      <SelectItem value={ALL_COHORTS}>All cohorts</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               )}

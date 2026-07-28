@@ -383,6 +383,7 @@ export class InviteService extends BaseService {
     courseId: string,
     courseVersionId: string,
     cohortId?: string,
+    senderIsAdmin = false,
   ): Promise<InviteResult[]> {
     // Get Course Details (outside transaction)
     const course = await this.courseRepo.read(courseId.toString());
@@ -438,13 +439,21 @@ export class InviteService extends BaseService {
         );
       }
 
-      // A learner joins exactly one cohort, so the choice is mandatory for
-      // them. Staff may legitimately be invited course-wide instead.
+      // A learner joins exactly one cohort, so the choice is mandatory.
       if (courseVersion.cohorts?.length > 0 && !cohortId) {
         throw new BadRequestError(
           'Course version contains cohorts, student must choose a cohort',
         );
       }
+    }
+
+    // Staff may be invited course-wide, but granting reach over every cohort
+    // is an administrator's call — otherwise an instructor confined to one
+    // cohort could mint a colleague who is confined to none.
+    if (courseVersion.cohorts?.length > 0 && !cohortId && !senderIsAdmin) {
+      throw new ForbiddenError(
+        'Only an administrator can invite staff across all cohorts. Select a cohort.',
+      );
     }
 
     if (cohortId) {
@@ -566,6 +575,7 @@ export class InviteService extends BaseService {
     courseVersionId: string,
     role: EnrollmentRole,
     cohortId?: string,
+    senderIsAdmin = false,
   ): Promise<string> {
     const versionStatus =
       await this.courseRepo.getCourseVersionStatus(courseVersionId);
@@ -574,6 +584,22 @@ export class InviteService extends BaseService {
       throw new ForbiddenError(
         'This enrollment is invalid. Because course version is archived.',
       );
+    }
+
+    // A link enrolls whoever opens it, so it carries the same cohort rules as
+    // a direct invite — a learner needs one, and only an admin may omit it.
+    const courseVersion = await this.courseRepo.readVersion(courseVersionId);
+    if (courseVersion?.cohorts?.length > 0 && !cohortId) {
+      if (role === 'STUDENT') {
+        throw new BadRequestError(
+          'Course version contains cohorts, student must choose a cohort',
+        );
+      }
+      if (!senderIsAdmin) {
+        throw new ForbiddenError(
+          'Only an administrator can invite staff across all cohorts. Select a cohort.',
+        );
+      }
     }
     const token = crypto.randomBytes(24).toString('hex');
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);

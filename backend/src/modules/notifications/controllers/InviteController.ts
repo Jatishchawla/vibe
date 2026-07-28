@@ -121,6 +121,7 @@ export class InviteController {
       courseId,
       versionId,
       cohortId?.toString(),
+      authenticatedUser.globalRole === 'admin',
     );
 
     setAuditTrail(req, {
@@ -208,6 +209,7 @@ export class InviteController {
       versionId,
       role,
       cohortId,
+      authenticatedUser.globalRole === 'admin',
     );
 
     setAuditTrail(req, {
