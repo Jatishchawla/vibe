@@ -3166,6 +3166,8 @@ function TeacherCourseContent() {
                             selectedItemName={selectedItem.name}
                             action={isEditingItem ? "edit" : "view"}
                             item={selectedItemData?.item}
+                            courseId={courseId}
+                            courseVersionId={versionId}
                             onClose={() => setIsEditingItem(false)}
                             onSave={video => {
                               const formattedVideo = {
@@ -3249,6 +3251,8 @@ function TeacherCourseContent() {
                               selectedItemName={selectedItem.name}
                               action={isEditingItem ? "edit" : "view"}
                               item={selectedItemData?.item}
+                              courseId={courseId}
+                              courseVersionId={versionId}
                               onClose={() => setIsEditingItem(false)}
                               onSave={video => {
                                 const formattedVideo = {
@@ -3601,6 +3605,8 @@ function TeacherCourseContent() {
             isLoading={isLoading}
             selectedItemName={selectedItem.name}
             action="add"
+            courseId={courseId}
+            courseVersionId={versionId}
             onClose={() => setShowAddVideoModal(null)}
             onSave={video => {
               handleAddItem(

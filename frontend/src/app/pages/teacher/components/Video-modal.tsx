@@ -4,6 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Video } from "@/types/video.types";
 import Loader from "@/components/Loader";
 import ConfirmationModal from "./confirmation-modal";
+import VideoUploadPanel from "./VideoUploadPanel";
+import { resolveVideoSource, type VideoSource } from "@/types/media.types";
 
 function getYouTubeId(url: string): string | null {
     const match = url.match(/(?:v=|youtu\.be\/?)([\w-]{11})/);
@@ -21,6 +23,13 @@ interface VideoModalProps {
     action: "add" | "edit" | "view";
     selectedItemName: string;
     isLoading: boolean;
+    /**
+     * Course scope for uploads. Optional so existing call sites keep working —
+     * without them the Upload option is offered but disabled, rather than
+     * letting a teacher start an upload that has nowhere to go.
+     */
+    courseId?: string | null;
+    courseVersionId?: string | null;
 }
 
 function formatTime(seconds: number): string {
@@ -85,11 +94,25 @@ const VideoModal: React.FC<VideoModalProps> = ({
     onEdit,
     item,
     action,
+    courseId,
+    courseVersionId,
 }) => {
     // State for fields
     const [name, setName] = useState(item?.name || "");
     const [description, setDescription] = useState(item?.description || "");
     const [url, setUrl] = useState(item?.details?.URL || "");
+    /**
+     * Where this item's video comes from. Existing items have no `source`, so
+     * resolveVideoSource reads them as YOUTUBE and the link flow below is
+     * unchanged for them.
+     */
+    const [source, setSource] = useState<VideoSource>(
+        resolveVideoSource(item?.details),
+    );
+    const [assetId, setAssetId] = useState<string | undefined>(
+        item?.details?.assetId,
+    );
+    const canUpload = Boolean(courseId && courseVersionId);
     const [duration, setDuration] = useState(0);
     const [playerReady, setPlayerReady] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
@@ -448,7 +471,15 @@ const VideoModal: React.FC<VideoModalProps> = ({
         const newErrors = {
             name: name ? "" : errorMessages.name,
             description: description ? "" : errorMessages.description,
-            url: url ? "" : errorMessages.url,
+            // An uploaded video has no URL to validate — it needs an asset instead.
+            url:
+                source === "GCS"
+                    ? assetId
+                        ? ""
+                        : "Upload a video before saving"
+                    : url
+                        ? ""
+                        : errorMessages.url,
         };
 
         setErrorList(newErrors);
@@ -479,7 +510,13 @@ const VideoModal: React.FC<VideoModalProps> = ({
             description,
             type: "VIDEO",
             details: {
-                URL: url,
+                // The two sources are mutually exclusive: the backend validator
+                // rejects a URL alongside an assetId, so send only the relevant
+                // one. `source` is omitted for YouTube so items written here look
+                // exactly like every item written before uploads existed.
+                ...(source === "GCS"
+                    ? { source: "GCS" as VideoSource, assetId }
+                    : { URL: url }),
                 startTime: formatTime(startSeconds),
                 endTime: formatTime(endSeconds),
                 points,
@@ -551,15 +588,76 @@ const VideoModal: React.FC<VideoModalProps> = ({
                         {errorList.name && (
                             <p className="text-xs text-red-500 mt-1">{errorList.name}</p>
                         )}
-                        <Input
-                            placeholder="Paste YouTube video URL *"
-                            value={url}
-                            onChange={e => setUrl(e.target.value)}
-                            disabled={action === "view"}
-                            className="bg-background border-border"
-                        />
-                        {errorList.url && (
-                            <p className="text-xs text-red-500 mt-1">{errorList.url}</p>
+                        {/*
+                          * Source picker. Hidden in view mode and for existing
+                          * items — switching an item's source after learners have
+                          * progress against it would orphan their watch history,
+                          * so it is a create-time choice only.
+                          */}
+                        {action === "add" && (
+                            <div className="flex gap-2">
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={source === "YOUTUBE" ? "default" : "outline"}
+                                    onClick={() => setSource("YOUTUBE")}
+                                >
+                                    YouTube link
+                                </Button>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={source === "GCS" ? "default" : "outline"}
+                                    disabled={!canUpload}
+                                    title={
+                                        canUpload
+                                            ? undefined
+                                            : "Uploading isn't available from this screen yet"
+                                    }
+                                    onClick={() => setSource("GCS")}
+                                >
+                                    Upload a video
+                                </Button>
+                            </div>
+                        )}
+
+                        {source === "GCS" ? (
+                            <>
+                                {courseId && courseVersionId ? (
+                                    <VideoUploadPanel
+                                        courseId={courseId}
+                                        courseVersionId={courseVersionId}
+                                        assetId={assetId}
+                                        onAssetChange={setAssetId}
+                                        startTime={timeInputs.start}
+                                        endTime={timeInputs.end}
+                                        // Gives the range validation below a real
+                                        // duration, the same way the YouTube player does.
+                                        onDurationChange={setDuration}
+                                        readOnly={action === "view"}
+                                    />
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">
+                                        Uploading isn't available from this screen yet.
+                                    </p>
+                                )}
+                                {errorList.url && (
+                                    <p className="text-xs text-red-500 mt-1">{errorList.url}</p>
+                                )}
+                            </>
+                        ) : (
+                            <>
+                                <Input
+                                    placeholder="Paste YouTube video URL *"
+                                    value={url}
+                                    onChange={e => setUrl(e.target.value)}
+                                    disabled={action === "view"}
+                                    className="bg-background border-border"
+                                />
+                                {errorList.url && (
+                                    <p className="text-xs text-red-500 mt-1">{errorList.url}</p>
+                                )}
+                            </>
                         )}
                         <textarea
                             placeholder="Description *"

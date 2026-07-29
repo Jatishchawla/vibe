@@ -1,3 +1,5 @@
+import type { VideoSource } from './media.types';
+
 // Props for the video player component
 export interface VideoProps {
   URL: string;
@@ -134,7 +136,12 @@ export interface Video {
   description: string;
   type: string;
   details: {
-    URL: string;
+    /** Required for a YouTube video; absent for an uploaded one. */
+    URL?: string;
+    /** Absent means YOUTUBE — see resolveVideoSource in media.types. */
+    source?: VideoSource;
+    /** The uploaded video this item plays. Set only when source is GCS. */
+    assetId?: string;
     startTime: string;
     endTime: string;
     points: number;

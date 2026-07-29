@@ -28,6 +28,14 @@ export interface VideoUploadPanelProps {
     /** Segment bounds, so the preview matches what a learner would see. */
     startTime?: string;
     endTime?: string;
+    /**
+     * Video length, once the preview loads it. The item editor needs this to
+     * validate the start/end range — the same job the YouTube player does for
+     * link-based video.
+     */
+    onDurationChange?: (seconds: number) => void;
+    /** View mode: show the video and its status, but allow no changes. */
+    readOnly?: boolean;
 }
 
 export default function VideoUploadPanel({
@@ -37,6 +45,8 @@ export default function VideoUploadPanel({
     onAssetChange,
     startTime,
     endTime,
+    onDurationChange,
+    readOnly = false,
 }: VideoUploadPanelProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { upload, cancel, reset, phase, progress, error } = useVideoUpload();
@@ -68,7 +78,13 @@ export default function VideoUploadPanel({
                 onChange={event => void handlePick(event.target.files?.[0])}
             />
 
-            {!assetId && !isUploading && (
+            {!assetId && !isUploading && readOnly && (
+                <p className="text-sm text-muted-foreground">
+                    No video has been uploaded for this item yet.
+                </p>
+            )}
+
+            {!assetId && !isUploading && !readOnly && (
                 <div className="rounded-md border border-dashed p-6 text-center">
                     <Upload className="mx-auto h-8 w-8 text-muted-foreground" />
                     <p className="mt-2 text-sm font-medium">Upload a video</p>
@@ -159,14 +175,16 @@ export default function VideoUploadPanel({
                             {asset?.status === 'FAILED' && (
                                 <AlertCircle className="h-4 w-4 text-destructive" />
                             )}
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={handleRemove}
-                            >
-                                Replace
-                            </Button>
+                            {!readOnly && (
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={handleRemove}
+                                >
+                                    Replace
+                                </Button>
+                            )}
                         </div>
                     </div>
 
@@ -177,6 +195,7 @@ export default function VideoUploadPanel({
                                 startTime={startTime}
                                 endTime={endTime}
                                 className="aspect-video w-full"
+                                onReady={onDurationChange}
                             />
                             <p className="mt-2 text-xs text-muted-foreground">
                                 Preview only. Uploaded video is not yet enabled for
