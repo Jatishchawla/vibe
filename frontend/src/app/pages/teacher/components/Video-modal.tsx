@@ -428,6 +428,22 @@ const VideoModal: React.FC<VideoModalProps> = ({
     const hasErrors = () => {
         return errors.startTime !== "" || errors.endTime !== "";
     };
+
+    /**
+     * Default an uploaded video's segment to its full length.
+     *
+     * The YouTube flow gets its range from the IFrame player as it loads. The
+     * upload flow has no such player, so start and end would both stay at 0:00 —
+     * which handleSave rejects as an invalid range, silently refusing to save.
+     * A whole uploaded video is the sensible default; the teacher can still trim
+     * it afterwards.
+     */
+    useEffect(() => {
+        if (source !== "GCS" || duration <= 0) return;
+        if (parseTimeToSeconds(timeInputs.end) > 0) return; // already set
+        setRange([0, duration]);
+        setTimeInputs({start: formatTime(0), end: formatTime(duration)});
+    }, [source, duration, timeInputs.end]);
     const [errorList, setErrorList] = useState({ name: "", description: "", url: "" })
     const errorMessages = {
         name: "Video name is required",
