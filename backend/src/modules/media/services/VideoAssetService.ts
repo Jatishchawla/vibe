@@ -161,7 +161,10 @@ export class VideoAssetService {
 
     let probe;
     try {
-      probe = await this.storage.probeForPlaylist(assetId);
+      probe = await this.storage.probeForPlaylist({
+        assetId,
+        uploadObjectKey: asset.uploadObjectKey,
+      });
     } catch (error) {
       // A storage hiccup must not flip a good asset to FAILED — leave the state
       // alone and let the next poll retry.

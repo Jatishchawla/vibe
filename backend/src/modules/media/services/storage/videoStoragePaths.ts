@@ -34,9 +34,36 @@ export function buildUploadObjectKey(
   return `uploads/${assetId}/source${ext}`;
 }
 
-/** Prefix under which the transcoder's output for this asset is expected. */
-export function streamPrefixFor(assetId: string): string {
-  return `${assetId}/`;
+/**
+ * Prefixes to search for this asset's transcoded output, most likely first.
+ *
+ * Transcoding is kicked off by a Cloud Function watching the raw bucket, so the
+ * output path is derived from the *input object path* by code we don't own. It
+ * may mirror the input path, or flatten to the asset id, or nest under the input
+ * basename — all three are common. GCS listing needs a literal prefix (there is
+ * no substring search), so rather than guess once we probe an ordered set.
+ *
+ * Every candidate contains the assetId, so a probe can never stray into another
+ * asset's output.
+ */
+export function candidateStreamPrefixes(
+  assetId: string,
+  uploadObjectKey?: string,
+): string[] {
+  const candidates = [
+    // The transcoder mirrored the input path verbatim.
+    `uploads/${assetId}/`,
+    // Output was flattened to just the asset id.
+    `${assetId}/`,
+  ];
+
+  // Nested under the input file's basename, e.g. uploads/<id>/source/…
+  if (uploadObjectKey) {
+    const withoutExtension = uploadObjectKey.replace(/\.[^./]+$/, '');
+    candidates.push(`${withoutExtension}/`);
+  }
+
+  return [...new Set(candidates)];
 }
 
 /** Lowercased extension, validated against the accepted source list. */

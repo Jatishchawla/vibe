@@ -1,10 +1,10 @@
 import {describe, expect, it} from 'vitest';
 import {
   buildUploadObjectKey,
+  candidateStreamPrefixes,
   isAllowedSourceFileName,
   isMasterPlaylistBody,
   pickMasterPlaylist,
-  streamPrefixFor,
 } from '../services/storage/videoStoragePaths.js';
 
 /**
@@ -132,8 +132,44 @@ describe('isAllowedSourceFileName', () => {
   });
 });
 
-describe('streamPrefixFor', () => {
-  it('scopes the listing to one asset', () => {
-    expect(streamPrefixFor('abc123')).toBe('abc123/');
+/**
+ * Transcoding is triggered by a Cloud Function watching the raw bucket, so the
+ * output path is chosen by code ViBe does not own. These assert we search every
+ * plausible layout, and — critically — that every prefix stays scoped to the one
+ * asset, so a probe can never read another asset's output.
+ */
+describe('candidateStreamPrefixes', () => {
+  it('covers input-path mirroring, flattening, and basename nesting', () => {
+    const prefixes = candidateStreamPrefixes(
+      'abc123',
+      'uploads/abc123/source.mp4',
+    );
+    expect(prefixes).toEqual([
+      'uploads/abc123/',
+      'abc123/',
+      'uploads/abc123/source/',
+    ]);
+  });
+
+  it('still returns usable prefixes without an upload key', () => {
+    expect(candidateStreamPrefixes('abc123')).toEqual([
+      'uploads/abc123/',
+      'abc123/',
+    ]);
+  });
+
+  it('never emits a prefix that escapes the asset', () => {
+    for (const prefix of candidateStreamPrefixes(
+      'abc123',
+      'uploads/abc123/source.mp4',
+    )) {
+      expect(prefix).toContain('abc123');
+      expect(prefix.endsWith('/')).toBe(true);
+    }
+  });
+
+  it('deduplicates when the derived prefix repeats another candidate', () => {
+    const prefixes = candidateStreamPrefixes('abc123', 'abc123.mp4');
+    expect(prefixes).toEqual(['uploads/abc123/', 'abc123/']);
   });
 });

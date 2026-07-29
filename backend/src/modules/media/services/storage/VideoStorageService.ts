@@ -2,9 +2,9 @@ import {injectable} from 'inversify';
 import {Storage} from '@google-cloud/storage';
 import {storageConfig} from '#root/config/storage.js';
 import {
+  candidateStreamPrefixes,
   isMasterPlaylistBody,
   pickMasterPlaylist,
-  streamPrefixFor,
 } from './videoStoragePaths.js';
 
 /** Outcome of probing the stream bucket for an asset's transcoded output. */
@@ -97,37 +97,48 @@ export class VideoStorageService {
   /**
    * Look for a finished HLS ladder for this asset.
    *
-   * Lists the asset's prefix rather than assuming a filename, then *confirms*
-   * the ranked candidate really is a multivariant playlist by reading it. A
-   * confident guess that turns out to be a single rendition would silently pin
-   * every learner to one bitrate, so it is verified rather than trusted.
+   * Searches each candidate output prefix rather than assuming one layout, then
+   * *confirms* the ranked candidate really is a multivariant playlist by reading
+   * it. A confident guess that turns out to be a single rendition would silently
+   * pin every learner to one bitrate, so it is verified rather than trusted.
    */
-  async probeForPlaylist(assetId: string): Promise<PlaylistProbeResult> {
-    const [files] = await this.storage
-      .bucket(this.streamBucketName)
-      .getFiles({prefix: streamPrefixFor(assetId)});
+  async probeForPlaylist(input: {
+    assetId: string;
+    uploadObjectKey?: string;
+  }): Promise<PlaylistProbeResult> {
+    const bucket = this.storage.bucket(this.streamBucketName);
+    const prefixes = candidateStreamPrefixes(
+      input.assetId,
+      input.uploadObjectKey,
+    );
 
-    if (files.length === 0) return {inProgress: false};
+    let sawAnyObject = false;
 
-    const candidate = pickMasterPlaylist(files.map(file => file.name));
-    if (!candidate) return {inProgress: true};
+    for (const prefix of prefixes) {
+      const [files] = await bucket.getFiles({prefix});
+      if (files.length === 0) continue;
+      sawAnyObject = true;
 
-    const [body] = await this.storage
-      .bucket(this.streamBucketName)
-      .file(candidate)
-      .download();
+      const candidate = pickMasterPlaylist(files.map(file => file.name));
+      if (!candidate) continue;
 
-    if (!isMasterPlaylistBody(body.toString('utf8'))) {
-      return {
-        inProgress: false,
-        problem:
-          `Found playlist "${candidate}" but it is not a multivariant master ` +
-          '(no #EXT-X-STREAM-INF). The transcoder output layout differs from ' +
-          'what videoStoragePaths.pickMasterPlaylist expects.',
-      };
+      const [body] = await bucket.file(candidate).download();
+      if (!isMasterPlaylistBody(body.toString('utf8'))) {
+        return {
+          inProgress: false,
+          problem:
+            `Found playlist "${candidate}" but it is not a multivariant master ` +
+            '(no #EXT-X-STREAM-INF). The transcoder output layout differs from ' +
+            'what videoStoragePaths.pickMasterPlaylist expects.',
+        };
+      }
+
+      return {playlistObjectKey: candidate, inProgress: false};
     }
 
-    return {playlistObjectKey: candidate, inProgress: false};
+    // Objects exist but no playlist yet => transcoding is genuinely running.
+    // Nothing at all => still waiting on the upload or the trigger.
+    return {inProgress: sawAnyObject};
   }
 }
 

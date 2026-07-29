@@ -21,10 +21,18 @@ export const storageConfig = {
    * the output naming convention is encoded.
    */
   video: {
-    /** Raw teacher uploads land here (the transcoder's input). */
-    uploadBucketName: env('GOOGLE_VIDEO_UPLOAD_BUCKET') || 'vibe-video-uploads',
+    /**
+     * Raw teacher uploads land here. Writing an object into this bucket is what
+     * triggers the Cloud Function that starts transcoding — so the upload is
+     * the pipeline's only entry point; ViBe never calls the transcoder.
+     */
+    uploadBucketName:
+      env('GOOGLE_VIDEO_UPLOAD_BUCKET') ||
+      'hls-streaming-gcp-raw-files-vibe-5b35a',
     /** Transcoded HLS variants + master playlists are written here. */
-    streamBucketName: env('GOOGLE_VIDEO_STREAM_BUCKET') || 'vibe-video-streams',
+    streamBucketName:
+      env('GOOGLE_VIDEO_STREAM_BUCKET') ||
+      'hls-streaming-gcp-processed-files-vibe-5b35a',
     /** Lifetime of an issued upload URL. One hour covers a large upload. */
     uploadUrlTtlMinutes: Number(env('VIDEO_UPLOAD_URL_TTL_MINUTES') || '60'),
     /**
