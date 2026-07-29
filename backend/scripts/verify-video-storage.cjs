@@ -20,6 +20,14 @@
 const fs = require('fs');
 const path = require('path');
 
+// Read .env the way the server does, so this reports on the same configuration
+// the backend actually runs with rather than a hand-passed environment.
+try {
+  require('dotenv').config();
+} catch {
+  // dotenv absent: fall back to whatever is already in the environment.
+}
+
 // Defaults intentionally mirror src/config/storage.ts. Duplicated because this
 // is a plain .cjs diagnostic that cannot import the compiled TS config.
 const UPLOAD_BUCKET =
