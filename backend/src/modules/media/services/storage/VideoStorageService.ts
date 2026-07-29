@@ -3,6 +3,7 @@ import {Storage} from '@google-cloud/storage';
 import {storageConfig} from '#root/config/storage.js';
 import {
   candidateStreamPrefixes,
+  expectedMasterPlaylistKey,
   isMasterPlaylistBody,
   pickMasterPlaylist,
 } from './videoStoragePaths.js';
@@ -107,6 +108,22 @@ export class VideoStorageService {
     uploadObjectKey?: string;
   }): Promise<PlaylistProbeResult> {
     const bucket = this.storage.bucket(this.streamBucketName);
+
+    // Fast path: the confirmed convention is one deterministic key, so check it
+    // directly instead of listing the bucket.
+    if (input.uploadObjectKey) {
+      const expected = expectedMasterPlaylistKey(input.uploadObjectKey);
+      const [exists] = await bucket.file(expected).exists();
+      if (exists) {
+        const [body] = await bucket.file(expected).download();
+        if (isMasterPlaylistBody(body.toString('utf8'))) {
+          return {playlistObjectKey: expected, inProgress: false};
+        }
+        // Present but not a master — fall through to the listing scan rather
+        // than pinning every learner to a single rendition.
+      }
+    }
+
     const prefixes = candidateStreamPrefixes(
       input.assetId,
       input.uploadObjectKey,

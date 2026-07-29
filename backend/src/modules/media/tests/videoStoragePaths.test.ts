@@ -2,10 +2,64 @@ import {describe, expect, it} from 'vitest';
 import {
   buildUploadObjectKey,
   candidateStreamPrefixes,
+  expectedMasterPlaylistKey,
   isAllowedSourceFileName,
   isMasterPlaylistBody,
   pickMasterPlaylist,
 } from '../services/storage/videoStoragePaths.js';
+
+/**
+ * Real output captured from the live pipeline for input `sample.mp4`
+ * (scripts/verify-video-storage.cjs). Kept verbatim so a change in the
+ * externally-owned transcoder shows up here as a failing test rather than as
+ * every upload silently going FAILED in production.
+ */
+const REAL_PIPELINE_OUTPUT = [
+  'sample.mp4/audio-only0000000000.m4s',
+  'sample.mp4/hd.mp4',
+  'sample.mp4/manifest.m3u8',
+  'sample.mp4/manifest.mpd',
+  'sample.mp4/media-hd.m3u8',
+  'sample.mp4/media-hd0000000000.ts',
+  'sample.mp4/media-sd.m3u8',
+  'sample.mp4/media-sd0000000000.ts',
+  'sample.mp4/sd.mp4',
+  'sample.mp4/video-only-hd0000000000.m4s',
+  'sample.mp4/video-only-sd0000000000.m4s',
+];
+
+describe('real pipeline output', () => {
+  it('picks manifest.m3u8, not one of the media-* variants', () => {
+    expect(pickMasterPlaylist(REAL_PIPELINE_OUTPUT)).toBe(
+      'sample.mp4/manifest.m3u8',
+    );
+  });
+
+  it('ignores the DASH manifest', () => {
+    expect(pickMasterPlaylist(REAL_PIPELINE_OUTPUT)).not.toMatch(/\.mpd$/);
+  });
+
+  it('derives the same key the pipeline actually wrote', () => {
+    expect(expectedMasterPlaylistKey('sample.mp4')).toBe(
+      'sample.mp4/manifest.m3u8',
+    );
+  });
+
+  it('derives the key for a ViBe upload path', () => {
+    const uploadKey = buildUploadObjectKey('abc123', 'lecture.mp4');
+    expect(expectedMasterPlaylistKey(uploadKey)).toBe(
+      'uploads/abc123/source.mp4/manifest.m3u8',
+    );
+  });
+
+  it('is still reachable by the fallback prefix scan', () => {
+    // The output nests under the full input object name, so the mirrored-input
+    // prefix must still match it if the fast path is ever missed.
+    const uploadKey = buildUploadObjectKey('abc123', 'lecture.mp4');
+    const [mirrored] = candidateStreamPrefixes('abc123', uploadKey);
+    expect(expectedMasterPlaylistKey(uploadKey).startsWith(mirrored)).toBe(true);
+  });
+});
 
 /**
  * These cover the one piece of real branching in the media module: deciding

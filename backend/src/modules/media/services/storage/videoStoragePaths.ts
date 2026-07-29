@@ -35,13 +35,34 @@ export function buildUploadObjectKey(
 }
 
 /**
- * Prefixes to search for this asset's transcoded output, most likely first.
+ * The master playlist path for a given upload — the confirmed convention.
  *
- * Transcoding is kicked off by a Cloud Function watching the raw bucket, so the
- * output path is derived from the *input object path* by code we don't own. It
- * may mirror the input path, or flatten to the asset id, or nest under the input
- * basename — all three are common. GCS listing needs a literal prefix (there is
- * no substring search), so rather than guess once we probe an ordered set.
+ * Verified against real pipeline output (scripts/verify-video-storage.cjs): the
+ * Cloud Function uses the *full input object name, extension included* as the
+ * output directory, and names the multivariant playlist `manifest.m3u8`:
+ *
+ *   input   sample.mp4
+ *   output  sample.mp4/manifest.m3u8      ← master
+ *           sample.mp4/media-hd.m3u8      ← variant
+ *           sample.mp4/media-sd.m3u8      ← variant
+ *           sample.mp4/manifest.mpd       ← DASH, also produced
+ *           sample.mp4/{hd,sd}.mp4        ← progressive, also produced
+ *
+ * So `uploads/<id>/source.mp4` yields `uploads/<id>/source.mp4/manifest.m3u8`.
+ * Checking this one key is a single existence call instead of a bucket listing;
+ * `candidateStreamPrefixes` remains the fallback if the pipeline ever changes.
+ */
+export function expectedMasterPlaylistKey(uploadObjectKey: string): string {
+  return `${uploadObjectKey}/manifest.m3u8`;
+}
+
+/**
+ * Fallback prefixes to search when the expected key is absent, most likely first.
+ *
+ * Retained deliberately: the transcoding pipeline is owned outside ViBe, so a
+ * change to its naming would otherwise turn every upload into a silent FAILED.
+ * GCS listing needs a literal prefix (there is no substring search), so we probe
+ * an ordered set rather than guessing once.
  *
  * Every candidate contains the assetId, so a probe can never stray into another
  * asset's output.
