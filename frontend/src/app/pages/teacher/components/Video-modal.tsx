@@ -866,12 +866,16 @@ const VideoModal: React.FC<VideoModalProps> = ({
                                         }
                                         return endSeconds <= startSeconds;
                                     };
-                                    const isDisabled = 
-                                    (action !== "add" && !playerReady) || 
-                                    !url || 
-                                    !name || 
-                                    !description || 
-                                    hasErrors() || 
+                                    // An uploaded video has no URL and no YouTube
+                                    // player, so those two gates only apply to the
+                                    // link flow. It needs a ready asset instead.
+                                    const isUpload = source === "GCS";
+                                    const isDisabled =
+                                    (action !== "add" && !playerReady && !isUpload) ||
+                                    (isUpload ? !assetId : !url) ||
+                                    !name ||
+                                    !description ||
+                                    hasErrors() ||
                                     hasTimeRangeError();
 
                                     return (
