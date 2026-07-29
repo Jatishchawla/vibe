@@ -34,7 +34,7 @@ export class VideoStorageService {
 
   constructor() {
     this.storage = new Storage({
-      projectId: storageConfig.googleCloud.projectId,
+      projectId: storageConfig.video.projectId,
     });
     this.uploadBucketName = storageConfig.video.uploadBucketName;
     this.streamBucketName = storageConfig.video.streamBucketName;

@@ -22,6 +22,15 @@ export const storageConfig = {
    */
   video: {
     /**
+     * GCP project owning the video buckets.
+     *
+     * Deliberately its OWN variable rather than reusing GCLOUD_PROJECT: that one
+     * is read by the Firebase Admin SDK to decide which project to verify ID
+     * tokens against, so pointing it at the video project makes Firebase reject
+     * every token with an "incorrect aud claim" error. Keep the two separate.
+     */
+    projectId: env('GOOGLE_VIDEO_PROJECT_ID') || env('GCLOUD_PROJECT'),
+    /**
      * Raw teacher uploads land here. Writing an object into this bucket is what
      * triggers the Cloud Function that starts transcoding — so the upload is
      * the pipeline's only entry point; ViBe never calls the transcoder.
