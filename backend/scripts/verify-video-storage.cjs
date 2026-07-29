@@ -112,7 +112,10 @@ async function main() {
   );
 
   console.log('\n── Bucket access ───────────────────────────────────────────');
-  await probeBucket(storage, UPLOAD_BUCKET, 'raw/upload bucket');
+  // The upload bucket is checked with testPermissions, not by listing: the
+  // correct grant here is write-only (objectCreator), so a listing failure would
+  // report a properly least-privileged service account as broken.
+  await probeUploadPermissions(storage, UPLOAD_BUCKET);
   await probeBucket(storage, STREAM_BUCKET, 'processed/stream bucket');
 
   console.log('\n── Signing ─────────────────────────────────────────────────');
@@ -130,6 +133,29 @@ async function main() {
   }
 
   summarize();
+}
+
+/**
+ * The upload bucket only needs `storage.objects.create`. Ask GCS directly which
+ * permissions we hold rather than inferring from a failed listing.
+ */
+async function probeUploadPermissions(storage, bucketName) {
+  try {
+    const [granted] = await storage
+      .bucket(bucketName)
+      .iam.testPermissions(['storage.objects.create']);
+    const canCreate = Boolean(granted['storage.objects.create']);
+    record(
+      'raw/upload bucket writable',
+      canCreate,
+      canCreate
+        ? `${bucketName} (objects.create granted)`
+        : `${bucketName}: storage.objects.create denied — the service account ` +
+          'cannot upload. Grant it objectCreator (or objectAdmin).',
+    );
+  } catch (error) {
+    record('raw/upload bucket writable', false, `${bucketName}: ${error.message}`);
+  }
 }
 
 async function probeBucket(storage, bucketName, label) {

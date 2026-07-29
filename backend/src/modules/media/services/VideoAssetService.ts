@@ -124,7 +124,11 @@ export class VideoAssetService {
     const {exists, sizeBytes} = await this.storage.statUpload(
       asset.uploadObjectKey,
     );
-    if (!exists) {
+    // Only a definite "not there" blocks. 'unknown' means our credentials are
+    // write-only on the upload bucket — the correct least-privilege grant — so
+    // we cannot look, and refusing here would break every upload. READY still
+    // requires a real playlist in the stream bucket, which a client cannot fake.
+    if (exists === false) {
       throw new BadRequestError(
         'Upload not found in storage. Complete the upload before marking it done.',
       );

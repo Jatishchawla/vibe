@@ -84,15 +84,31 @@ export class VideoStorageService {
     return {url, expiresAt};
   }
 
-  /** Whether the raw upload actually landed, and how big it is. */
+  /**
+   * Whether the raw upload actually landed, and how big it is.
+   *
+   * `exists: 'unknown'` when our credentials may write to the upload bucket but
+   * not read it. That is the *correct* least-privilege grant for this service —
+   * it only ever needs to hand out upload URLs — so being unable to look is
+   * expected, not a misconfiguration, and must not be reported as "missing".
+   *
+   * Callers must therefore not treat 'unknown' as failure. Nothing is lost
+   * safety-wise: an asset only becomes READY once a real playlist is observed in
+   * the stream bucket, which no client can fake.
+   */
   async statUpload(
     objectKey: string,
-  ): Promise<{exists: boolean; sizeBytes?: number}> {
+  ): Promise<{exists: boolean | 'unknown'; sizeBytes?: number}> {
     const file = this.storage.bucket(this.uploadBucketName).file(objectKey);
-    const [exists] = await file.exists();
-    if (!exists) return {exists: false};
-    const [metadata] = await file.getMetadata();
-    return {exists: true, sizeBytes: Number(metadata.size ?? 0) || undefined};
+    try {
+      const [exists] = await file.exists();
+      if (!exists) return {exists: false};
+      const [metadata] = await file.getMetadata();
+      return {exists: true, sizeBytes: Number(metadata.size ?? 0) || undefined};
+    } catch (error) {
+      if (isPermissionDenied(error)) return {exists: 'unknown'};
+      throw error;
+    }
   }
 
   /**
@@ -161,4 +177,10 @@ export class VideoStorageService {
 
 function minutesFromNow(minutes: number): Date {
   return new Date(Date.now() + minutes * 60 * 1000);
+}
+
+/** A 401/403 from GCS, as opposed to a real failure worth surfacing. */
+function isPermissionDenied(error: unknown): boolean {
+  const code = (error as {code?: number})?.code;
+  return code === 403 || code === 401;
 }
