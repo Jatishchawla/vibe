@@ -47,3 +47,16 @@ export interface CreateVideoUploadUrlInput {
 
 /** Where an item's video comes from. Lets uploaded and YouTube video coexist. */
 export type VideoSource = 'YOUTUBE' | 'GCS';
+
+/**
+ * Resolve a video item's source, treating an absent value as YOUTUBE.
+ *
+ * Mirrors resolveVideoSource in the backend's shared/interfaces/models.ts. Every
+ * video item created before uploads existed has no `source`, so absent must keep
+ * meaning YouTube or existing courses stop playing.
+ */
+export function resolveVideoSource(details?: {
+    source?: VideoSource;
+}): VideoSource {
+    return details?.source ?? 'YOUTUBE';
+}
