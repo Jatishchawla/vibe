@@ -29,6 +29,8 @@ export class VideoAssetRepository {
       });
       // The readiness poller scans only assets still in flight.
       await this.collection.createIndex({status: 1, lastPolledAt: 1});
+      // Library search is by title within a course version.
+      await this.collection.createIndex({courseVersionId: 1, title: 1});
     } catch (error) {
       // Index creation is best-effort: a replica lacking permission must not
       // stop the module from serving reads and writes.
@@ -51,20 +53,48 @@ export class VideoAssetRepository {
     });
   }
 
+  /**
+   * The course's video library. Newest first, since a teacher segmenting a
+   * lecture they just uploaded is the common case.
+   */
   async listByCourseVersion(
     courseVersionId: string,
-    limit = 100,
+    options: {limit?: number; search?: string; readyOnly?: boolean} = {},
   ): Promise<IVideoAsset[]> {
     await this.init();
     if (!ObjectId.isValid(courseVersionId)) return [];
+
+    const filter: Record<string, unknown> = {
+      courseVersionId: new ObjectId(courseVersionId),
+      isDeleted: {$ne: true},
+    };
+
+    const search = options.search?.trim();
+    if (search) {
+      // Escaped so a title containing regex characters is matched literally
+      // rather than being interpreted as a pattern.
+      const pattern = new RegExp(escapeRegex(search), 'i');
+      filter.$or = [{title: pattern}, {originalFileName: pattern}];
+    }
+
+    // The picker in the item editor only offers playable videos: a still-
+    // processing upload has no playlist to segment against.
+    if (options.readyOnly) filter.status = 'READY';
+
     return this.collection
-      .find({
-        courseVersionId: new ObjectId(courseVersionId),
-        isDeleted: {$ne: true},
-      })
+      .find(filter)
       .sort({createdAt: -1})
-      .limit(limit)
+      .limit(options.limit ?? 100)
       .toArray();
+  }
+
+  async countByCourseVersion(courseVersionId: string): Promise<number> {
+    await this.init();
+    if (!ObjectId.isValid(courseVersionId)) return 0;
+    return this.collection.countDocuments({
+      courseVersionId: new ObjectId(courseVersionId),
+      isDeleted: {$ne: true},
+    });
   }
 
   /**
@@ -98,6 +128,23 @@ export class VideoAssetRepository {
     return result ?? null;
   }
 
+  /**
+   * Whether any course item still plays this asset. Checked before deletion so a
+   * lesson cannot be left pointing at a removed video.
+   */
+  async isReferencedByItem(assetId: string): Promise<boolean> {
+    await this.init();
+    if (!ObjectId.isValid(assetId)) return false;
+    // Video item details live in 'videos' (see ItemRepository.videoCollection),
+    // where the asset reference sits on the nested details object.
+    const videoItems = await this.db.getCollection('videos');
+    const referencing = await videoItems.findOne({
+      'details.assetId': assetId,
+      isDeleted: {$ne: true},
+    });
+    return Boolean(referencing);
+  }
+
   async softDelete(assetId: string): Promise<boolean> {
     await this.init();
     if (!ObjectId.isValid(assetId)) return false;
@@ -107,4 +154,9 @@ export class VideoAssetRepository {
     );
     return result.modifiedCount === 1;
   }
+}
+
+/** Treat user input as literal text inside a regex. */
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

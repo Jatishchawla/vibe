@@ -3,10 +3,12 @@ import {
   Authorized,
   Body,
   CurrentUser,
+  Delete,
   Get,
   HttpCode,
   JsonController,
   Params,
+  Patch,
   Post,
   QueryParams,
 } from 'routing-controllers';
@@ -20,6 +22,7 @@ import {
   CreateVideoUploadUrlResponse,
   ListVideoAssetsQuery,
   VideoAssetIdParams,
+  UpdateVideoAssetBody,
   VideoAssetListResponse,
   VideoAssetResponse,
   VideoPlaybackGrantResponse,
@@ -116,7 +119,9 @@ export class VideoAssetController {
   }
 
   @OpenAPI({
-    summary: 'List video assets for a course version',
+    summary: "List a course's video library",
+    description:
+      'Visible to any instructor on the course version, not only the uploader.',
   })
   @Authorized()
   @Get('/')
@@ -131,8 +136,50 @@ export class VideoAssetController {
       courseId: query.courseId,
       courseVersionId: query.courseVersionId,
       limit: query.limit,
+      search: query.search,
+      readyOnly: query.readyOnly,
     });
     return {items: assets.map(toAssetResponse)};
+  }
+
+  @OpenAPI({
+    summary: 'Rename a video or record details learned after upload',
+  })
+  @Authorized()
+  @Patch('/:assetId')
+  @HttpCode(200)
+  @ResponseSchema(VideoAssetResponse)
+  async update(
+    @Params() params: VideoAssetIdParams,
+    @Body() body: UpdateVideoAssetBody,
+    @CurrentUser() user: IUser,
+  ): Promise<VideoAssetResponse> {
+    const asset = await this.service.updateAsset({
+      assetId: params.assetId,
+      user,
+      title: body.title,
+      description: body.description,
+      durationSeconds: body.durationSeconds,
+    });
+    return toAssetResponse(asset);
+  }
+
+  @OpenAPI({
+    summary: 'Remove a video from the library',
+    description:
+      'Refused while any lesson still plays it, which would leave that lesson ' +
+      'unplayable. Stored files are not deleted — this service holds no delete ' +
+      'permission on either bucket.',
+  })
+  @Authorized()
+  @Delete('/:assetId')
+  @HttpCode(200)
+  async remove(
+    @Params() params: VideoAssetIdParams,
+    @CurrentUser() user: IUser,
+  ): Promise<{success: boolean}> {
+    await this.service.deleteAsset(params.assetId, user);
+    return {success: true};
   }
 }
 
@@ -140,6 +187,10 @@ function toAssetResponse(asset: IVideoAsset): VideoAssetResponse {
   return {
     assetId: asset._id?.toString() ?? '',
     status: asset.status,
+    // Assets created before titles existed fall back to their filename rather
+    // than showing an empty row in the library.
+    title: asset.title || asset.originalFileName,
+    description: asset.description,
     originalFileName: asset.originalFileName,
     playable: asset.status === 'READY' && Boolean(asset.playlistObjectKey),
     sizeBytes: asset.sizeBytes,

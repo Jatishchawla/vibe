@@ -30,7 +30,17 @@ export interface IVideoAsset {
   courseVersionId: ObjectId;
   /** Teacher who requested the upload URL. */
   createdBy: ObjectId;
-  /** Original filename, kept only for display in the teacher UI. */
+  /**
+   * Display name in the course's video library, editable after upload.
+   *
+   * Defaults to the filename without its extension, because that is the only
+   * thing known at upload time — but a library of "lecture_final_v3" entries is
+   * unusable, so instructors are expected to rename.
+   */
+  title: string;
+  /** Optional notes, e.g. what the recording covers. */
+  description?: string;
+  /** Original filename, retained for provenance even after renaming. */
   originalFileName: string;
   /** MIME type pinned into the signed upload URL; the PUT must match it. */
   contentType: string;
@@ -62,6 +72,8 @@ export class VideoAsset implements IVideoAsset {
   courseId: ObjectId;
   courseVersionId: ObjectId;
   createdBy: ObjectId;
+  title: string;
+  description?: string;
   originalFileName: string;
   contentType: string;
   uploadObjectKey: string;
@@ -85,10 +97,15 @@ export class VideoAsset implements IVideoAsset {
     originalFileName: string;
     contentType: string;
     uploadObjectKey: string;
+    /** Optional display name; falls back to the filename without extension. */
+    title?: string;
+    description?: string;
   }) {
     this.courseId = new ObjectId(input.courseId);
     this.courseVersionId = new ObjectId(input.courseVersionId);
     this.createdBy = new ObjectId(input.createdBy);
+    this.title = input.title?.trim() || stripExtension(input.originalFileName);
+    this.description = input.description?.trim() || undefined;
     this.originalFileName = input.originalFileName;
     this.contentType = input.contentType;
     this.uploadObjectKey = input.uploadObjectKey;
@@ -97,4 +114,9 @@ export class VideoAsset implements IVideoAsset {
     this.updatedAt = new Date();
     this.isDeleted = false;
   }
+}
+
+/** "lecture-01.mp4" -> "lecture-01". A default title, not a filename. */
+export function stripExtension(fileName: string): string {
+  return fileName.replace(/\.[^./\\]+$/, '') || fileName;
 }

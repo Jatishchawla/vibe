@@ -53,6 +53,9 @@ export class VideoAssetService {
     fileName: string;
     contentType: string;
     sizeBytes?: number;
+    /** Library display name; defaults to the filename without its extension. */
+    title?: string;
+    description?: string;
   }): Promise<{
     assetId: string;
     uploadUrl: string;
@@ -94,6 +97,8 @@ export class VideoAssetService {
       originalFileName: input.fileName,
       contentType: input.contentType,
       uploadObjectKey,
+      title: input.title,
+      description: input.description,
     });
     await this.repository.create({...asset, _id: assetId});
 
@@ -236,22 +241,98 @@ export class VideoAssetService {
     });
   }
 
-  /** Teacher-facing listing for one course version. */
+  /**
+   * The course's video library. Visible to any instructor on the course version,
+   * not only the uploader — a co-instructor segmenting someone else's lecture is
+   * the expected workflow.
+   */
   async listByCourseVersion(input: {
     user: IUser;
     courseId: string;
     courseVersionId: string;
     limit?: number;
+    search?: string;
+    readyOnly?: boolean;
   }): Promise<IVideoAsset[]> {
     await this.assertCanManage(
       input.user,
       input.courseId,
       input.courseVersionId,
     );
-    return this.repository.listByCourseVersion(
+
+    const assets = await this.repository.listByCourseVersion(
       input.courseVersionId,
-      input.limit ?? 100,
+      {
+        limit: input.limit ?? 100,
+        search: input.search,
+        readyOnly: input.readyOnly,
+      },
     );
+
+    // Advance anything still in flight as it is listed, so the library reflects
+    // reality without needing the cron sweep to have run.
+    return Promise.all(
+      assets.map(asset =>
+        asset.status === 'READY' || asset.status === 'FAILED'
+          ? asset
+          : this.refreshReadiness(asset),
+      ),
+    );
+  }
+
+  /**
+   * Rename an asset or record details learned after upload.
+   *
+   * `durationSeconds` is accepted from the client because the backend cannot read
+   * it — the upload credential is write-only on the raw bucket by design, and the
+   * transcoder does not report back. The value is only ever used to prefill and
+   * validate segment timestamps in the editor, never for authorization, so a
+   * wrong value costs a bad default rather than access to anything.
+   */
+  async updateAsset(input: {
+    assetId: string;
+    user: IUser;
+    title?: string;
+    description?: string;
+    durationSeconds?: number;
+  }): Promise<IVideoAsset> {
+    const asset = await this.loadManageable(input.assetId, input.user);
+
+    const changes: Partial<IVideoAsset> = {};
+    if (input.title !== undefined) {
+      const title = input.title.trim();
+      if (!title) throw new BadRequestError('Title cannot be empty.');
+      changes.title = title;
+    }
+    if (input.description !== undefined) {
+      changes.description = input.description.trim() || undefined;
+    }
+    if (input.durationSeconds !== undefined && input.durationSeconds > 0) {
+      changes.durationSeconds = Math.round(input.durationSeconds);
+    }
+
+    if (Object.keys(changes).length === 0) return asset;
+    const updated = await this.repository.update(input.assetId, changes);
+    return updated ?? asset;
+  }
+
+  /**
+   * Remove an asset from the library.
+   *
+   * Refused while any item still plays it — otherwise that lesson would silently
+   * become unplayable. The stored objects are left in place: the service holds no
+   * delete permission on either bucket, and pretending otherwise would make this
+   * look like it reclaims storage when it does not.
+   */
+  async deleteAsset(assetId: string, user: IUser): Promise<void> {
+    await this.loadManageable(assetId, user);
+
+    if (await this.repository.isReferencedByItem(assetId)) {
+      throw new BadRequestError(
+        'This video is used by one or more lessons. Remove it from them first.',
+      );
+    }
+    await this.repository.softDelete(assetId);
   }
 
   /**

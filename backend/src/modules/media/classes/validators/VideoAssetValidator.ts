@@ -1,13 +1,15 @@
 import {
+  IsBoolean,
   IsInt,
   IsMongoId,
   IsNotEmpty,
   IsOptional,
   IsString,
+  MaxLength,
   Min,
 } from 'class-validator';
 import {JSONSchema} from 'class-validator-jsonschema';
-import {Type} from 'class-transformer';
+import {Transform, Type} from 'class-transformer';
 import {VideoAssetStatus} from '../transformers/VideoAsset.js';
 
 export class CreateVideoUploadUrlBody {
@@ -61,6 +63,50 @@ export class CreateVideoUploadUrlBody {
   @IsInt()
   @Min(1)
   sizeBytes?: number;
+
+  @JSONSchema({
+    title: 'Title',
+    description:
+      'Library display name. Defaults to the filename without its extension.',
+    type: 'string',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  title?: string;
+
+  @JSONSchema({title: 'Description', type: 'string'})
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  description?: string;
+}
+
+export class UpdateVideoAssetBody {
+  @JSONSchema({title: 'Title', type: 'string'})
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  title?: string;
+
+  @JSONSchema({title: 'Description', type: 'string'})
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  description?: string;
+
+  @JSONSchema({
+    title: 'Duration in Seconds',
+    description:
+      'Reported by the client once the video loads. Used only to prefill and ' +
+      'validate segment timestamps.',
+    type: 'number',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  durationSeconds?: number;
 }
 
 export class VideoAssetIdParams {
@@ -87,6 +133,27 @@ export class ListVideoAssetsQuery {
   @IsInt()
   @Min(1)
   limit?: number;
+
+  @JSONSchema({
+    title: 'Search',
+    description: 'Case-insensitive match on title or original filename',
+    type: 'string',
+  })
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @JSONSchema({
+    title: 'Ready Only',
+    description:
+      'Restrict to playable videos — used by the item editor, since a video ' +
+      'still processing cannot be segmented yet.',
+    type: 'boolean',
+  })
+  @IsOptional()
+  @Transform(({value}) => value === true || value === 'true')
+  @IsBoolean()
+  readyOnly?: boolean;
 }
 
 export class CreateVideoUploadUrlResponse {
@@ -121,6 +188,12 @@ export class VideoAssetResponse {
 
   @JSONSchema({type: 'string'})
   status: VideoAssetStatus;
+
+  @JSONSchema({description: 'Library display name', type: 'string'})
+  title: string;
+
+  @JSONSchema({type: 'string'})
+  description?: string;
 
   @JSONSchema({type: 'string'})
   originalFileName: string;
