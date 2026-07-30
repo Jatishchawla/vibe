@@ -114,6 +114,8 @@ const VideoModal: React.FC<VideoModalProps> = ({
         item?.details?.assetId,
     );
     const canUpload = Boolean(courseId && courseVersionId);
+    /** This item plays an uploaded video rather than a YouTube link. */
+    const isUpload = source === "GCS";
     const [duration, setDuration] = useState(0);
     const [playerReady, setPlayerReady] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
@@ -663,19 +665,12 @@ const VideoModal: React.FC<VideoModalProps> = ({
                                                 }
                                             }}
                                         />
-                                        {assetId && (
-                                            <HlsVideoPlayer
-                                                key={assetId}
-                                                assetId={assetId}
-                                                startTime={timeInputs.start}
-                                                endTime={timeInputs.end}
-                                                className="aspect-video w-full"
-                                                // Same job the YouTube player does for
-                                                // links: supply the duration the range
-                                                // validation needs.
-                                                onReady={setDuration}
-                                            />
-                                        )}
+                                        {/*
+                                          * The preview itself renders below, in the same
+                                          * container as the timestamp controls, so an
+                                          * uploaded video is edited exactly like a YouTube
+                                          * one.
+                                          */}
                                     </>
                                 ) : (
                                     <p className="text-sm text-muted-foreground">
@@ -712,7 +707,13 @@ const VideoModal: React.FC<VideoModalProps> = ({
                         {errorList.description && (
                             <p className="text-xs text-red-500 mt-1">{errorList.description}</p>
                         )}
-                        {videoId && (
+                        {/*
+                          * Gated on "a video is loaded", not on a YouTube id — the
+                          * timestamp controls live inside this block, and keying it to
+                          * videoId meant an uploaded video had no way to set start and
+                          * end at all.
+                          */}
+                        {(videoId || (isUpload && assetId)) && (
                             <div
                                 style={{
                                     width: "100%",
@@ -728,17 +729,41 @@ const VideoModal: React.FC<VideoModalProps> = ({
                             >
                                 {/* Video Container */}
                                 <div style={{ position: "relative", width: "100%", aspectRatio: "16/9", background: "#000" }}>
-                                    <div
-                                        ref={iframeRef}
-                                        style={{
-                                            width: "100%",
-                                            height: "100%",
-                                            background: "#000",
-                                            borderRadius: "12px 12px 0 0",
-                                            overflow: "hidden",
-                                            position: "relative",
-                                        }}
-                                    />
+                                    {isUpload && assetId ? (
+                                        <HlsVideoPlayer
+                                            key={assetId}
+                                            /**
+                                             * Shares the YouTube player's ref. HlsPlayerHandle
+                                             * exposes the same seekTo/getCurrentTime/play/pause
+                                             * surface, so the timestamp inputs, the Go to
+                                             * Start/End buttons and the segment-bound
+                                             * enforcement all work unchanged.
+                                             */
+                                            ref={playerRef}
+                                            assetId={assetId}
+                                            startTime={timeInputs.start}
+                                            endTime={timeInputs.end}
+                                            className="h-full w-full"
+                                            onReady={seconds => {
+                                                setDuration(seconds);
+                                                // Unlocks the timestamp controls, which are
+                                                // gated on a ready player.
+                                                setPlayerReady(true);
+                                            }}
+                                        />
+                                    ) : (
+                                        <div
+                                            ref={iframeRef}
+                                            style={{
+                                                width: "100%",
+                                                height: "100%",
+                                                background: "#000",
+                                                borderRadius: "12px 12px 0 0",
+                                                overflow: "hidden",
+                                                position: "relative",
+                                            }}
+                                        />
+                                    )}
                                     {/* Overlay */}
                                     {showOverlay && (
                                         <div
@@ -910,7 +935,6 @@ const VideoModal: React.FC<VideoModalProps> = ({
                                     // An uploaded video has no URL and no YouTube
                                     // player, so those two gates only apply to the
                                     // link flow. It needs a ready asset instead.
-                                    const isUpload = source === "GCS";
                                     const isDisabled =
                                     (action !== "add" && !playerReady && !isUpload) ||
                                     (isUpload ? !assetId : !url) ||
