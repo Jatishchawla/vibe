@@ -102,14 +102,25 @@ const HlsVideoPlayer = forwardRef<HlsPlayerHandle, HlsVideoPlayerProps>(
         const startSeconds = parseTimeToSeconds(startTime);
         const endSeconds = parseTimeToSeconds(endTime);
 
-        const reportError = useCallback(
-            (message: string) => {
-                setError(message);
-                setLoading(false);
-                onError?.(message);
-            },
-            [onError],
-        );
+        /**
+         * Callbacks and the seek target are held in refs so that neither a parent
+         * passing inline handlers nor an edited timestamp can invalidate `load`.
+         *
+         * This matters: `load` tears down hls.js and fetches a fresh playback
+         * grant, so if it were recreated whenever `startTime` changed, typing a
+         * timestamp in the item editor would restart the video — and request a new
+         * signed URL — on every keystroke.
+         */
+        const startSecondsRef = useRef(startSeconds);
+        startSecondsRef.current = startSeconds;
+        const onErrorRef = useRef(onError);
+        onErrorRef.current = onError;
+
+        const reportError = useCallback((message: string) => {
+            setError(message);
+            setLoading(false);
+            onErrorRef.current?.(message);
+        }, []);
 
         /**
          * Attach a freshly-signed playlist to the media element.
@@ -136,7 +147,7 @@ const HlsVideoPlayer = forwardRef<HlsPlayerHandle, HlsVideoPlayerProps>(
                         hls.on(Hls.Events.MANIFEST_PARSED, () => {
                             setLoading(false);
                             recoveringRef.current = false;
-                            const seekTarget = resumeAt ?? startSeconds;
+                            const seekTarget = resumeAt ?? startSecondsRef.current;
                             if (seekTarget) video.currentTime = seekTarget;
                             if (autoPlay) void video.play().catch(() => undefined);
                         });
@@ -175,7 +186,7 @@ const HlsVideoPlayer = forwardRef<HlsPlayerHandle, HlsVideoPlayerProps>(
                     // Safari plays HLS natively; hls.js is unsupported there.
                     if (video.canPlayType('application/vnd.apple.mpegurl')) {
                         video.src = grant.url;
-                        const seekTarget = resumeAt ?? startSeconds;
+                        const seekTarget = resumeAt ?? startSecondsRef.current;
                         if (seekTarget) {
                             const seekOnce = () => {
                                 video.currentTime = seekTarget;
@@ -197,7 +208,7 @@ const HlsVideoPlayer = forwardRef<HlsPlayerHandle, HlsVideoPlayerProps>(
                     );
                 }
             },
-            [assetId, autoPlay, reportError, startSeconds],
+            [assetId, autoPlay, reportError],
         );
 
         useEffect(() => {
@@ -211,6 +222,21 @@ const HlsVideoPlayer = forwardRef<HlsPlayerHandle, HlsVideoPlayerProps>(
                 hlsRef.current = null;
             };
         }, [load]);
+
+        /**
+         * Reposition when the segment start changes — a seek, not a reload.
+         *
+         * Editing the start timestamp should move the preview, but tearing the
+         * player down for it would restart the stream and burn a signed URL per
+         * keystroke. Skipped while playing so it cannot yank a learner backwards.
+         */
+        useEffect(() => {
+            const video = videoRef.current;
+            if (!video || loading || startSeconds === undefined) return;
+            if (!video.paused) return;
+            if (Math.abs(video.currentTime - startSeconds) < 0.5) return;
+            video.currentTime = startSeconds;
+        }, [startSeconds, loading]);
 
         // Segment bounds: an item is a slice of a longer video, so stop at endTime
         // instead of playing on into the next lesson's content.

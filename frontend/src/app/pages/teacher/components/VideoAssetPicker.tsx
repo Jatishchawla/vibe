@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { Check, ChevronDown, Search, Video as VideoIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,27 @@ export default function VideoAssetPicker({
 }: VideoAssetPickerProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Close on an outside click or Escape. Without this the list stays open over
+  // the timestamp fields directly below it and blocks editing them.
+  useEffect(() => {
+    if (!open) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open]);
 
   // readyOnly keeps unplayable videos out of the list entirely rather than
   // showing them disabled, since they cannot be chosen anyway.
@@ -56,7 +77,7 @@ export default function VideoAssetPicker({
   );
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" ref={containerRef}>
       <div className="relative">
         <Button
           type="button"

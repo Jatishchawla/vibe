@@ -114,15 +114,30 @@ export class VideoAssetRepository {
       .toArray();
   }
 
+  /**
+   * Apply a partial change.
+   *
+   * An explicit `undefined` clears the field. The driver would otherwise write it
+   * as null, leaving `description: null` on a type declared `string | undefined`,
+   * so those keys are split into `$unset` instead.
+   */
   async update(
     assetId: string,
     changes: Partial<IVideoAsset>,
   ): Promise<IVideoAsset | null> {
     await this.init();
     if (!ObjectId.isValid(assetId)) return null;
+
+    const set: Record<string, unknown> = {updatedAt: new Date()};
+    const unset: Record<string, ''> = {};
+    for (const [key, value] of Object.entries(changes)) {
+      if (value === undefined) unset[key] = '';
+      else set[key] = value;
+    }
+
     const result = await this.collection.findOneAndUpdate(
       {_id: new ObjectId(assetId), isDeleted: {$ne: true}},
-      {$set: {...changes, updatedAt: new Date()}},
+      Object.keys(unset).length > 0 ? {$set: set, $unset: unset} : {$set: set},
       {returnDocument: 'after'},
     );
     return result ?? null;

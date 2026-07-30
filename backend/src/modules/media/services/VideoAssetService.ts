@@ -38,6 +38,15 @@ const MANAGING_ROLES = new Set(['INSTRUCTOR', 'MANAGER', 'TA', 'STAFF']);
  */
 const ABANDONED_UPLOAD_AFTER_MS = 6 * 60 * 60 * 1000;
 
+/**
+ * Limits on refreshing in-flight assets while serving a list.
+ *
+ * Transcoding takes minutes, so probing the same asset every few seconds tells us
+ * nothing new and just multiplies bucket calls by the number of open library tabs.
+ */
+const REFRESH_COOLDOWN_MS = 15 * 1000;
+const MAX_REFRESH_PER_LIST = 4;
+
 @injectable()
 export class VideoAssetService {
   constructor(
@@ -297,12 +306,19 @@ export class VideoAssetService {
 
     // Advance anything still in flight as it is listed, so the library reflects
     // reality without needing the cron sweep to have run.
+    //
+    // Bounded deliberately: the library polls every few seconds, and refreshing
+    // every in-flight asset on every poll would mean a bucket probe per asset per
+    // poll. Assets probed very recently are skipped, and only a handful are
+    // advanced per request — the rest are picked up by the next poll or the cron.
+    let budget = MAX_REFRESH_PER_LIST;
     return Promise.all(
-      assets.map(asset =>
-        asset.status === 'READY' || asset.status === 'FAILED'
-          ? asset
-          : this.refreshReadiness(asset),
-      ),
+      assets.map(asset => {
+        if (asset.status === 'READY' || asset.status === 'FAILED') return asset;
+        if (budget <= 0 || wasPolledRecently(asset)) return asset;
+        budget -= 1;
+        return this.refreshReadiness(asset);
+      }),
     );
   }
 
@@ -454,6 +470,12 @@ export class VideoAssetService {
         enrollment.courseVersionId?.toString() === courseVersionId,
     );
   }
+}
+
+/** True when this asset was probed too recently for another probe to be useful. */
+function wasPolledRecently(asset: IVideoAsset): boolean {
+  if (!asset.lastPolledAt) return false;
+  return Date.now() - new Date(asset.lastPolledAt).getTime() < REFRESH_COOLDOWN_MS;
 }
 
 function requireUserId(user: IUser): string {
