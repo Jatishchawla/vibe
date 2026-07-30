@@ -454,7 +454,19 @@ export default function Video({ URL, source, assetId, startTime, nextItemId, end
           // transient/slow failure on a genuinely-watched video can still complete.
           if (stopFailCountRef.current >= 3) {
             progressStoppedRef.current = true;
-            toast.warning(err.response?.data?.message || 'You must watch at least 30 seconds of this video to proceed.');
+            /**
+             * The server's message is preferred, and read from several shapes
+             * because different clients here wrap errors differently — the
+             * previous single lookup missed most of them and fell through to the
+             * watch-time text, so an unrelated 500 was reported to the learner as
+             * "watch 30 seconds", sending everyone looking in the wrong place.
+             */
+            const serverMessage =
+              err?.response?.data?.message ?? err?.data?.message ?? err?.message;
+            toast.warning(
+              serverMessage ||
+              'We could not record your progress for this video. Please try again.',
+            );
             setIsStopFailed(true);
           }
           resolve(false);
