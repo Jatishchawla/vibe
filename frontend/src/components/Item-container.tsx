@@ -8,8 +8,6 @@ import type { QuizRef } from "@/types/quiz.types";
 import type { ItemContainerProps, ItemContainerRef } from '@/types/item-container.types';
 import FeedbackForm from '@/app/pages/student/components/FeedbackForm';
 import { useSubmitFeedback } from '@/hooks/hooks';
-import { resolveVideoSource } from '@/types/media.types';
-import UploadedVideoPlayer from './UploadedVideoPlayer';
 
 export interface ISubmitFeedbackBody {
   details: Record<string, any>;
@@ -50,34 +48,16 @@ const ItemContainer = forwardRef<ItemContainerRef, ItemContainerProps>(({ item, 
     switch (itemType) {
       case 'video':
         /**
-         * Uploaded (HLS) video takes its own player, which now records watch-time
-         * and completion — so a learner can progress through it.
-         *
-         * Still absent versus the YouTube path: proctoring, anomaly capture,
-         * face/gesture detection and seek gating. The props for those are
-         * deliberately not passed rather than passed and ignored, so it is
-         * obvious at the call site what an uploaded lesson does not enforce.
+         * One player component for both sources. Video picks an HLS or YouTube
+         * backend from `source` internally, so proctoring, seek gating,
+         * watch-time and the overlays are shared rather than duplicated —
+         * uploaded lessons get the same enforcement as YouTube ones.
          */
-        if (resolveVideoSource(item.details) === 'GCS') {
-          return (
-            <UploadedVideoPlayer
-              key={item._id.toString()}
-              assetId={item.details?.assetId ?? ''}
-              startTime={item.details?.startTime}
-              endTime={item.details?.endTime}
-              onNext={onNext}
-              isProgressUpdating={isProgressUpdating}
-              isCompleted={item.isCompleted || false}
-              isAlreadyWatched={item.isAlreadyWatched || false}
-              completedItemIdsRef={completedItemIdsRef}
-              nextItemId={nextItem?.itemId?.toString()}
-              seekForwardEnabled={seekForwardEnabled}
-            />
-          );
-        }
         return <Video
           key={item._id.toString()}
           URL={item.details?.URL ? item.details.URL : ''}
+          source={item.details?.source}
+          assetId={item.details?.assetId}
           startTime={item.details?.startTime ? item.details.startTime : ''}
           endTime={item.details?.endTime ? item.details.endTime : ''}
           points={item.details?.points ? item.details.points : ''}

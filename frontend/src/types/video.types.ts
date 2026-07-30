@@ -2,7 +2,12 @@ import type { VideoSource } from './media.types';
 
 // Props for the video player component
 export interface VideoProps {
+  /** YouTube link. Empty when the lesson is an uploaded video. */
   URL: string;
+  /** Absent means YOUTUBE — see resolveVideoSource in media.types. */
+  source?: VideoSource;
+  /** The uploaded video to stream. Required when source is GCS. */
+  assetId?: string;
   startTime?: string;
   endTime?: string;
   points?: string;
@@ -39,7 +44,14 @@ export interface VideoProps {
 
 
 
-// Minimal YouTube Player instance interface
+/**
+ * The player surface video.tsx drives.
+ *
+ * Named for YouTube historically, but it is now the contract both players
+ * satisfy — see components/video-players/hlsPlayerInstance.ts. Keeping the method
+ * names identical is what lets one implementation of proctoring, seek gating and
+ * watch-time serve uploaded video as well as YouTube.
+ */
 export interface YTPlayerInstance {
   playVideo: () => void;
   pauseVideo: () => void;
@@ -51,6 +63,12 @@ export interface YTPlayerInstance {
   setVolume: (volume: number) => void;
   setPlaybackRate: (rate: number) => void;
   getAvailablePlaybackRates?: () => number[];
+  /** YouTube-only concepts; inert on HLS, which picks quality itself. */
+  getAvailableQualityLevels?: () => string[];
+  setPlaybackQuality?: (quality: string) => void;
+  loadModule?: (module: string) => void;
+  setOption?: (module: string, option: string, value: unknown) => void;
+  destroy?: () => void;
   anomalies?: string[];
 }
 
