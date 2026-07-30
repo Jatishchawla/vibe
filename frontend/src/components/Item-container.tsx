@@ -9,6 +9,7 @@ import type { ItemContainerProps, ItemContainerRef } from '@/types/item-containe
 import FeedbackForm from '@/app/pages/student/components/FeedbackForm';
 import { useSubmitFeedback } from '@/hooks/hooks';
 import { resolveVideoSource } from '@/types/media.types';
+import UploadedVideoPlayer from './UploadedVideoPlayer';
 
 export interface ISubmitFeedbackBody {
   details: Record<string, any>;
@@ -49,29 +50,29 @@ const ItemContainer = forwardRef<ItemContainerRef, ItemContainerProps>(({ item, 
     switch (itemType) {
       case 'video':
         /**
-         * Uploaded (HLS) video is deliberately NOT played in the learner flow yet.
+         * Uploaded (HLS) video takes its own player, which now records watch-time
+         * and completion — so a learner can progress through it.
          *
-         * The props below — watch-time, proctoring, anomalies, linear progression,
-         * seek gating — are all wired to the YouTube player. HlsVideoPlayer does
-         * not implement any of them yet (phase 2), so rendering it here would let
-         * a learner watch an item while watch-time, proctoring and progress
-         * silently did nothing, and the item could never complete.
-         *
-         * Failing visibly is the safer half-built state. Teachers can still
-         * preview uploaded video from the item editor, which is what exercises
-         * the player until the instrumentation is ported.
+         * Still absent versus the YouTube path: proctoring, anomaly capture,
+         * face/gesture detection and seek gating. The props for those are
+         * deliberately not passed rather than passed and ignored, so it is
+         * obvious at the call site what an uploaded lesson does not enforce.
          */
         if (resolveVideoSource(item.details) === 'GCS') {
           return (
-            <div className="flex h-64 items-center justify-center p-6">
-              <div className="max-w-md text-center">
-                <p className="font-medium">This lesson isn't ready to play yet</p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  It uses an uploaded video, which isn't enabled for learners
-                  yet. Please contact your instructor.
-                </p>
-              </div>
-            </div>
+            <UploadedVideoPlayer
+              key={item._id.toString()}
+              assetId={item.details?.assetId ?? ''}
+              startTime={item.details?.startTime}
+              endTime={item.details?.endTime}
+              onNext={onNext}
+              isProgressUpdating={isProgressUpdating}
+              isCompleted={item.isCompleted || false}
+              isAlreadyWatched={item.isAlreadyWatched || false}
+              completedItemIdsRef={completedItemIdsRef}
+              nextItemId={nextItem?.itemId?.toString()}
+              seekForwardEnabled={seekForwardEnabled}
+            />
           );
         }
         return <Video

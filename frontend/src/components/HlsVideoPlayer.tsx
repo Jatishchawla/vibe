@@ -52,6 +52,9 @@ export interface HlsVideoPlayerProps {
     onEnded?: () => void;
     onTimeUpdate?: (currentSeconds: number) => void;
     onError?: (message: string) => void;
+    /** Fired on actual playback start/stop — drives watch-time tracking. */
+    onPlay?: () => void;
+    onPause?: () => void;
 }
 
 /** Parse HH:MM:SS / MM:SS / SS into seconds. Matches the existing item format. */
@@ -78,6 +81,8 @@ const HlsVideoPlayer = forwardRef<HlsPlayerHandle, HlsVideoPlayerProps>(
             onEnded,
             onTimeUpdate,
             onError,
+            onPlay,
+            onPause,
         },
         ref,
     ) {
@@ -222,16 +227,22 @@ const HlsVideoPlayer = forwardRef<HlsPlayerHandle, HlsVideoPlayerProps>(
             };
             const handleEnded = () => onEnded?.();
             const handleLoadedMetadata = () => onReady?.(video.duration);
+            const handlePlay = () => onPlay?.();
+            const handlePause = () => onPause?.();
 
             video.addEventListener('timeupdate', handleTimeUpdate);
             video.addEventListener('ended', handleEnded);
             video.addEventListener('loadedmetadata', handleLoadedMetadata);
+            video.addEventListener('play', handlePlay);
+            video.addEventListener('pause', handlePause);
             return () => {
                 video.removeEventListener('timeupdate', handleTimeUpdate);
                 video.removeEventListener('ended', handleEnded);
                 video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+                video.removeEventListener('play', handlePlay);
+                video.removeEventListener('pause', handlePause);
             };
-        }, [endSeconds, onEnded, onReady, onTimeUpdate]);
+        }, [endSeconds, onEnded, onReady, onTimeUpdate, onPlay, onPause]);
 
         useImperativeHandle(
             ref,
