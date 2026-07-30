@@ -578,9 +578,19 @@ const VideoModal: React.FC<VideoModalProps> = ({
             {isLoading ? <Loader /> :
                 <div
                     ref={modalRef}
-                    className="bg-card text-foreground rounded-lg p-6 
-                    overflow-y-auto
-                    min-w-4xl shadow-lg"
+                    /**
+                     * Height is capped to the viewport so the modal scrolls inside
+                     * itself. Without a cap it grew taller than the screen, and
+                     * because the overlay centres it with flex, the overflow was
+                     * clipped off the top where it cannot be scrolled to — the
+                     * video name field became unreachable.
+                     *
+                     * Width is a max rather than a min for the same reason: min-w
+                     * forced the modal wider than a narrow window.
+                     */
+                    className="bg-card text-foreground rounded-lg p-6
+                    overflow-y-auto max-h-[90vh]
+                    w-full max-w-4xl mx-4 shadow-lg"
                 >
 
 
