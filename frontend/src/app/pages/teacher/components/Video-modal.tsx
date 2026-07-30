@@ -160,6 +160,12 @@ const VideoModal: React.FC<VideoModalProps> = ({
         setName(item?.name || "");
         setDescription(item?.description || "");
         setUrl(item?.details?.URL || "");
+        // `item` arrives asynchronously, so the initial useState values were
+        // computed while it was still undefined — i.e. as a YouTube video. These
+        // two must be re-synced here alongside the rest, or opening a saved
+        // upload shows an empty "Paste YouTube video URL" field.
+        setSource(resolveVideoSource(item?.details));
+        setAssetId(item?.details?.assetId);
         setPoints(item?.details?.points ?? 0);
 
         const startTime = item?.details?.startTime || "0:00";
