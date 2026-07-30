@@ -3,6 +3,8 @@ import {MEDIA_TYPES} from './types.js';
 import {VideoAssetRepository} from './repositories/providers/mongodb/VideoAssetRepository.js';
 import {VideoStorageService} from './services/storage/VideoStorageService.js';
 import {SignedUrlPlaybackProvider} from './services/storage/PlaybackUrlProvider.js';
+import {CdnPlaybackProvider} from './services/storage/CdnPlaybackProvider.js';
+import {storageConfig} from '#root/config/storage.js';
 import {VideoAssetService} from './services/VideoAssetService.js';
 import {VideoAssetController} from './controllers/VideoAssetController.js';
 
@@ -16,15 +18,22 @@ export const mediaContainerModule = new ContainerModule(options => {
   options.bind(MEDIA_TYPES.VideoStorageService).to(VideoStorageService);
 
   /**
-   * Playback authorization strategy.
+   * Playback strategy, chosen by configuration.
    *
-   * Per-object signed URLs today. To move to Cloud CDN signed cookies — the
-   * better fit for HLS, since a player re-requests segments for the whole
-   * session — implement CdnCookiePlaybackProvider and rebind this one line.
-   * Nothing else in the module changes.
+   * With a CDN host configured, playback goes through Cloud CDN — cached at the
+   * edge, and signable across a whole path prefix so the .ts segments are covered
+   * too. Without one, it falls back to per-object storage-API signing, which is
+   * what worked before the CDN existed.
    */
   options.bind(SignedUrlPlaybackProvider).toSelf().inSingletonScope();
-  options.bind(MEDIA_TYPES.PlaybackUrlProvider).to(SignedUrlPlaybackProvider);
+  options.bind(CdnPlaybackProvider).toSelf().inSingletonScope();
+  options
+    .bind(MEDIA_TYPES.PlaybackUrlProvider)
+    .to(
+      storageConfig.video.cdnHost
+        ? CdnPlaybackProvider
+        : SignedUrlPlaybackProvider,
+    );
 
   // Service
   options.bind(VideoAssetService).toSelf().inSingletonScope();

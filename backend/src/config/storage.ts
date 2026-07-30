@@ -55,5 +55,24 @@ export const storageConfig = {
     ),
     /** Largest upload we will issue a URL for (bytes). Default 5 GB. */
     maxUploadBytes: Number(env('VIDEO_MAX_UPLOAD_BYTES') || `${5 * 1024 ** 3}`),
+
+    /**
+     * Cloud CDN in front of the stream bucket, e.g. cdn.vibe.vicharanashala.ai.
+     * When set, playback is served through the CDN instead of the storage API —
+     * cached at the edge, and signable across a whole path prefix.
+     */
+    cdnHost: env('GOOGLE_VIDEO_CDN_HOST'),
+    /** http while the LB's certificate is still being provisioned. */
+    cdnScheme: env('GOOGLE_VIDEO_CDN_SCHEME') || 'https',
+    /**
+     * Cloud CDN signed-URL key. GCP will not reveal the value after creation, so
+     * it has to be captured at `add-signed-url-key` time and supplied here.
+     *
+     * Without it, CDN playback URLs are unsigned — which only works while the
+     * bucket allows public read, and is therefore a temporary state, not a
+     * design. Supplying the key is what makes playback actually protected.
+     */
+    cdnKeyName: env('GOOGLE_VIDEO_CDN_KEY_NAME'),
+    cdnKeyValue: env('GOOGLE_VIDEO_CDN_KEY_VALUE'),
   },
 };
