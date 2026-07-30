@@ -60,6 +60,8 @@ export class VideoAssetController {
       fileName: body.fileName,
       contentType: body.contentType,
       sizeBytes: body.sizeBytes,
+      title: body.title,
+      description: body.description,
     });
   }
 
