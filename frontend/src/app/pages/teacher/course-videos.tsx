@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   Loader2,
   Play,
+  RefreshCw,
   Search,
   Trash2,
   Upload,
@@ -56,7 +57,11 @@ export default function CourseVideosPage() {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
 
-  const { assets, isLoading } = useVideoAssets(courseId, versionId, { search });
+  const { assets, isLoading, isFetching, refetch } = useVideoAssets(
+    courseId,
+    versionId,
+    { search },
+  );
   const updateAsset = useUpdateVideoAsset();
   const deleteAsset = useDeleteVideoAsset();
 
@@ -131,6 +136,19 @@ export default function CourseVideosPage() {
               className="w-56 pl-8"
             />
           </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={() => void refetch()}
+            disabled={isFetching}
+            title="Refresh"
+            aria-label="Refresh video list"
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`}
+            />
+          </Button>
           <Button type="button" onClick={() => setUploadOpen(true)}>
             <Upload className="mr-2 h-4 w-4" />
             Upload video
