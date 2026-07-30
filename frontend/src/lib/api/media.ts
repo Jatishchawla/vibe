@@ -1,5 +1,7 @@
 import type {
   CreateVideoUploadUrlInput,
+  ListVideoAssetsOptions,
+  UpdateVideoAssetInput,
   VideoAsset,
   VideoPlaybackGrant,
   VideoUploadGrant,
@@ -67,14 +69,37 @@ export async function getVideoPlaybackUrl(
     return apiFetch<VideoPlaybackGrant>(`${BASE_URL}/${assetId}/playback-url`);
 }
 
+/** The course's video library. */
 export async function listVideoAssets(
     courseId: string,
     courseVersionId: string,
-    limit?: number,
+    options: ListVideoAssetsOptions = {},
 ): Promise<{ items: VideoAsset[] }> {
     const query = new URLSearchParams({ courseId, courseVersionId });
-    if (limit) query.set('limit', String(limit));
+    if (options.limit) query.set('limit', String(options.limit));
+    if (options.search) query.set('search', options.search);
+    if (options.readyOnly) query.set('readyOnly', 'true');
     return apiFetch<{ items: VideoAsset[] }>(`${BASE_URL}?${query.toString()}`);
+}
+
+/** Rename a video, or record its duration once known. */
+export async function updateVideoAsset(
+    assetId: string,
+    input: UpdateVideoAssetInput,
+): Promise<VideoAsset> {
+    return apiFetch<VideoAsset>(`${BASE_URL}/${assetId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(input),
+    });
+}
+
+/** Remove a video from the library. Rejected if a lesson still uses it. */
+export async function deleteVideoAsset(
+    assetId: string,
+): Promise<{ success: boolean }> {
+    return apiFetch<{ success: boolean }>(`${BASE_URL}/${assetId}`, {
+        method: 'DELETE',
+    });
 }
 
 /**

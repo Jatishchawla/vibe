@@ -1,15 +1,19 @@
 import { useCallback, useRef, useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     createVideoUploadUrl,
+    deleteVideoAsset,
     getVideoAsset,
     getVideoPlaybackUrl,
     listVideoAssets,
     markVideoUploaded,
+    updateVideoAsset,
     uploadVideoToSignedUrl,
 } from '@/lib/api/media';
 import type {
     CreateVideoUploadUrlInput,
+    ListVideoAssetsOptions,
+    UpdateVideoAssetInput,
     VideoAsset,
 } from '@/types/media.types';
 
@@ -36,17 +40,60 @@ export function useVideoAsset(assetId?: string, enabled = true) {
     });
 }
 
+/**
+ * The course's video library.
+ *
+ * Polls while anything is still processing so a freshly uploaded lecture becomes
+ * selectable without the instructor reloading the page.
+ */
 export function useVideoAssets(
     courseId?: string,
     courseVersionId?: string,
-    enabled = true,
+    options: ListVideoAssetsOptions & { enabled?: boolean } = {},
 ) {
+    const { enabled = true, ...listOptions } = options;
     const result = useQuery({
-        queryKey: ['video-assets', courseId, courseVersionId],
-        queryFn: () => listVideoAssets(courseId!, courseVersionId!),
+        queryKey: [
+            'video-assets',
+            courseId,
+            courseVersionId,
+            listOptions.search ?? '',
+            listOptions.readyOnly ?? false,
+        ],
+        queryFn: () => listVideoAssets(courseId!, courseVersionId!, listOptions),
         enabled: Boolean(courseId && courseVersionId) && enabled,
+        refetchInterval: query => {
+            const items = (query.state.data as { items?: VideoAsset[] } | undefined)?.items;
+            const anyInFlight = items?.some(
+                a => a.status === 'UPLOADING' || a.status === 'PROCESSING',
+            );
+            return anyInFlight ? PROCESSING_POLL_MS : false;
+        },
     });
     return { ...result, assets: result.data?.items ?? [] };
+}
+
+export function useUpdateVideoAsset() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (input: { assetId: string } & UpdateVideoAssetInput) => {
+            const { assetId, ...changes } = input;
+            return updateVideoAsset(assetId, changes);
+        },
+        onSuccess: () => {
+            void queryClient.invalidateQueries({ queryKey: ['video-assets'] });
+        },
+    });
+}
+
+export function useDeleteVideoAsset() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (assetId: string) => deleteVideoAsset(assetId),
+        onSuccess: () => {
+            void queryClient.invalidateQueries({ queryKey: ['video-assets'] });
+        },
+    });
 }
 
 /**

@@ -27,6 +27,17 @@ import {
 /** Enrollment roles allowed to upload and manage course video. */
 const MANAGING_ROLES = new Set(['INSTRUCTOR', 'MANAGER', 'TA', 'STAFF']);
 
+/**
+ * How long an asset may sit in UPLOADING before it is treated as abandoned.
+ *
+ * An upload URL is issued before the browser sends anything, so a cancelled tab,
+ * a failed PUT or a closed laptop leaves a record that will never progress. We
+ * cannot ask the bucket whether the object arrived — the credential is write-only
+ * there by design — so staleness is judged by age. Generous enough for a large
+ * file on slow upstream; short enough that a library does not fill with ghosts.
+ */
+const ABANDONED_UPLOAD_AFTER_MS = 6 * 60 * 60 * 1000;
+
 @injectable()
 export class VideoAssetService {
   constructor(
@@ -167,6 +178,21 @@ export class VideoAssetService {
   async refreshReadiness(asset: IVideoAsset): Promise<IVideoAsset> {
     const assetId = asset._id?.toString();
     if (!assetId) return asset;
+
+    // Retire abandoned uploads rather than probing them forever. Only UPLOADING
+    // qualifies: once PROCESSING, the bytes did land and the transcoder owns it.
+    if (
+      asset.status === 'UPLOADING' &&
+      Date.now() - new Date(asset.createdAt).getTime() > ABANDONED_UPLOAD_AFTER_MS
+    ) {
+      const updated = await this.repository.update(assetId, {
+        status: 'FAILED',
+        failureReason:
+          'The upload never finished. Please upload this video again.',
+        lastPolledAt: new Date(),
+      });
+      return updated ?? asset;
+    }
 
     let probe;
     try {

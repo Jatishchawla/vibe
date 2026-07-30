@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Video } from "@/types/video.types";
 import Loader from "@/components/Loader";
 import ConfirmationModal from "./confirmation-modal";
-import VideoUploadPanel from "./VideoUploadPanel";
+import VideoAssetPicker from "./VideoAssetPicker";
+import HlsVideoPlayer from "@/components/HlsVideoPlayer";
 import { resolveVideoSource, type VideoSource } from "@/types/media.types";
 
 function getYouTubeId(url: string): string | null {
@@ -634,11 +635,11 @@ const VideoModal: React.FC<VideoModalProps> = ({
                                     title={
                                         canUpload
                                             ? undefined
-                                            : "Uploading isn't available from this screen yet"
+                                            : 'Open this from a course to choose a video'
                                     }
                                     onClick={() => setSource("GCS")}
                                 >
-                                    Upload a video
+                                    Course video
                                 </Button>
                             </div>
                         )}
@@ -646,21 +647,39 @@ const VideoModal: React.FC<VideoModalProps> = ({
                         {source === "GCS" ? (
                             <>
                                 {courseId && courseVersionId ? (
-                                    <VideoUploadPanel
-                                        courseId={courseId}
-                                        courseVersionId={courseVersionId}
-                                        assetId={assetId}
-                                        onAssetChange={setAssetId}
-                                        startTime={timeInputs.start}
-                                        endTime={timeInputs.end}
-                                        // Gives the range validation below a real
-                                        // duration, the same way the YouTube player does.
-                                        onDurationChange={setDuration}
-                                        readOnly={action === "view"}
-                                    />
+                                    <>
+                                        <VideoAssetPicker
+                                            courseId={courseId}
+                                            courseVersionId={courseVersionId}
+                                            assetId={assetId}
+                                            disabled={action === "view"}
+                                            onSelect={asset => {
+                                                setAssetId(asset.assetId);
+                                                // A known duration lets the range
+                                                // default to the whole video before
+                                                // the preview has even loaded.
+                                                if (asset.durationSeconds) {
+                                                    setDuration(asset.durationSeconds);
+                                                }
+                                            }}
+                                        />
+                                        {assetId && (
+                                            <HlsVideoPlayer
+                                                key={assetId}
+                                                assetId={assetId}
+                                                startTime={timeInputs.start}
+                                                endTime={timeInputs.end}
+                                                className="aspect-video w-full"
+                                                // Same job the YouTube player does for
+                                                // links: supply the duration the range
+                                                // validation needs.
+                                                onReady={setDuration}
+                                            />
+                                        )}
+                                    </>
                                 ) : (
                                     <p className="text-sm text-muted-foreground">
-                                        Uploading isn't available from this screen yet.
+                                        Open this from a course to choose a video.
                                     </p>
                                 )}
                                 {errorList.url && (

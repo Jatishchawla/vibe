@@ -21,6 +21,9 @@ export interface VideoUploadGrant {
 export interface VideoAsset {
   assetId: string;
   status: VideoAssetStatus;
+  /** Library display name, editable after upload. */
+  title: string;
+  description?: string;
   originalFileName: string;
   /** True when a playback grant can be issued. */
   playable: boolean;
@@ -43,6 +46,22 @@ export interface CreateVideoUploadUrlInput {
   fileName: string;
   contentType: string;
   sizeBytes?: number;
+  title?: string;
+  description?: string;
+}
+
+export interface UpdateVideoAssetInput {
+  title?: string;
+  description?: string;
+  /** Reported once the video loads; prefills and validates segment timestamps. */
+  durationSeconds?: number;
+}
+
+export interface ListVideoAssetsOptions {
+  search?: string;
+  /** Only playable videos — a still-processing upload cannot be segmented. */
+  readyOnly?: boolean;
+  limit?: number;
 }
 
 /** Where an item's video comes from. Lets uploaded and YouTube video coexist. */
