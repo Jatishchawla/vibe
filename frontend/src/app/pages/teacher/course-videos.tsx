@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
   AlertCircle,
@@ -8,12 +8,10 @@ import {
   Search,
   Trash2,
   Upload,
-  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import {
   Table,
   TableBody,
@@ -29,12 +27,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import HlsVideoPlayer from '@/components/HlsVideoPlayer';
+import VideoUploadDialog from './components/VideoUploadDialog';
 import { useCourseStore } from '@/store/course-store';
 import {
   useDeleteVideoAsset,
   useUpdateVideoAsset,
   useVideoAssets,
-  useVideoUpload,
 } from '@/hooks/media-hooks';
 import type { VideoAsset, VideoAssetStatus } from '@/types/media.types';
 
@@ -53,18 +51,14 @@ export default function CourseVideosPage() {
   const versionId = currentCourse?.versionId ?? undefined;
 
   const [search, setSearch] = useState('');
+  const [uploadOpen, setUploadOpen] = useState(false);
   const [previewAsset, setPreviewAsset] = useState<VideoAsset | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { assets, isLoading } = useVideoAssets(courseId, versionId, { search });
-  const { upload, cancel, phase, progress, error } = useVideoUpload();
   const updateAsset = useUpdateVideoAsset();
   const deleteAsset = useDeleteVideoAsset();
-
-  const isUploading =
-    phase === 'requesting' || phase === 'uploading' || phase === 'finalizing';
 
   const processingCount = useMemo(
     () =>
@@ -72,15 +66,6 @@ export default function CourseVideosPage() {
         .length,
     [assets],
   );
-
-  const handlePick = async (file?: File | null) => {
-    if (!file || !courseId || !versionId) return;
-    const result = await upload(file, { courseId, courseVersionId: versionId });
-    if (result) {
-      toast.success('Upload complete — processing has started.');
-    }
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
 
   const startRename = (asset: VideoAsset) => {
     setRenamingId(asset.assetId);
@@ -146,54 +131,12 @@ export default function CourseVideosPage() {
               className="w-56 pl-8"
             />
           </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="video/mp4,video/quicktime,video/x-matroska,video/webm,video/x-msvideo"
-            className="hidden"
-            onChange={e => void handlePick(e.target.files?.[0])}
-          />
-          <Button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
-          >
+          <Button type="button" onClick={() => setUploadOpen(true)}>
             <Upload className="mr-2 h-4 w-4" />
             Upload video
           </Button>
         </div>
       </div>
-
-      {isUploading && (
-        <div className="mb-4 rounded-md border p-4">
-          <div className="flex items-center justify-between">
-            <span className="flex items-center gap-2 text-sm font-medium">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              {phase === 'requesting' && 'Preparing upload…'}
-              {phase === 'uploading' && `Uploading… ${progress}%`}
-              {phase === 'finalizing' && 'Finishing up…'}
-            </span>
-            {phase === 'uploading' && (
-              <Button type="button" variant="ghost" size="sm" onClick={cancel}>
-                <X className="mr-1 h-3 w-3" />
-                Cancel
-              </Button>
-            )}
-          </div>
-          <Progress value={progress} className="mt-3" />
-          <p className="mt-2 text-xs text-muted-foreground">
-            Keep this page open until the bar completes. Processing afterwards
-            continues on its own.
-          </p>
-        </div>
-      )}
-
-      {error && (
-        <div className="mb-4 flex items-start gap-2 rounded-md border border-destructive/40 p-3">
-          <AlertCircle className="mt-0.5 h-4 w-4 text-destructive" />
-          <p className="text-sm text-destructive">{error}</p>
-        </div>
-      )}
 
       {processingCount > 0 && (
         <p className="mb-3 text-sm text-muted-foreground">
@@ -273,7 +216,15 @@ export default function CourseVideosPage() {
                 </TableCell>
 
                 <TableCell className="text-sm text-muted-foreground">
-                  {new Date(asset.createdAt).toLocaleDateString()}
+                  <span className="block">
+                    {new Date(asset.createdAt).toLocaleDateString()}
+                  </span>
+                  <span className="block text-xs">
+                    {new Date(asset.createdAt).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </span>
                 </TableCell>
 
                 <TableCell className="text-right">
@@ -306,6 +257,13 @@ export default function CourseVideosPage() {
           </TableBody>
         </Table>
       </div>
+
+      <VideoUploadDialog
+        open={uploadOpen}
+        onOpenChange={setUploadOpen}
+        courseId={courseId}
+        courseVersionId={versionId}
+      />
 
       <Dialog
         open={Boolean(previewAsset)}
