@@ -63,9 +63,14 @@ export interface YTPlayerInstance {
   setVolume: (volume: number) => void;
   setPlaybackRate: (rate: number) => void;
   getAvailablePlaybackRates?: () => number[];
-  /** YouTube-only concepts; inert on HLS, which picks quality itself. */
+  /**
+   * Selectable renditions, in each player's own vocabulary — YouTube reports
+   * 'hd720' etc., HLS reports '720p'. Controls render whatever they are given and
+   * pass the choice straight back, so neither side needs to know the other's names.
+   */
   getAvailableQualityLevels?: () => string[];
   setPlaybackQuality?: (quality: string) => void;
+  getPlaybackQuality?: () => string;
   loadModule?: (module: string) => void;
   setOption?: (module: string, option: string, value: unknown) => void;
   destroy?: () => void;

@@ -79,6 +79,13 @@ export default function Video({ URL, source, assetId, startTime, nextItemId, end
   const { playbackRate, setPlaybackRate, volume, setVolume, subtitlesEnabled, setSubtitlesEnabled } = usePlayerStore();
   const [maxTime, setMaxTime] = useState(0);
   const [videoEnded, setVideoEnded] = useState(false);
+  /**
+   * Selectable renditions reported by whichever player is active. Read once the
+   * player is ready rather than on every render, since for HLS the ladder is only
+   * known after the manifest parses.
+   */
+  const [qualityLevels, setQualityLevels] = useState<string[]>([]);
+  const [selectedQuality, setSelectedQuality] = useState('auto');
   // Rotating quote shown during the "preparing environment" delay.
   const [quoteIndex, setQuoteIndex] = useState(0);
   useEffect(() => {
@@ -729,6 +736,15 @@ export default function Video({ URL, source, assetId, startTime, nextItemId, end
       const dur = target.getDuration();
       setPlayerReady(true);
       setDuration(dur);
+      // Whatever renditions this player offers. Empty for YouTube until it has
+      // buffered, which is fine — the control hides itself when there is nothing
+      // to choose between.
+      try {
+        setQualityLevels(target.getAvailableQualityLevels?.() ?? []);
+        setSelectedQuality(target.getPlaybackQuality?.() ?? 'auto');
+      } catch {
+        setQualityLevels([]);
+      }
       target.setVolume(volume);
       setMaxTime(startTimeSeconds);
       target.seekTo(startTimeSeconds, true);
@@ -2042,6 +2058,36 @@ export default function Video({ URL, source, assetId, startTime, nextItemId, end
                     {playbackRate.toFixed(2)}x
                   </span>
                 </Card>
+
+                {/*
+                  * Quality selector. Rendered only when the active player reports
+                  * renditions, so it appears for uploaded video (HLS ladder) and
+                  * stays hidden where there is nothing to choose between.
+                  */}
+                {qualityLevels.length > 1 && (
+                  <Card className="flex flex-row items-center gap-1.5 px-2 py-0.5 bg-accent/15 flex-shrink-0">
+                    <span className="hidden md:block text-xs font-semibold text-foreground">
+                      Quality
+                    </span>
+                    <select
+                      value={selectedQuality}
+                      onChange={e => {
+                        const next = e.target.value;
+                        setSelectedQuality(next);
+                        playerRef.current?.setPlaybackQuality?.(next);
+                      }}
+                      aria-label="Video quality"
+                      className="bg-transparent text-xs font-semibold text-primary
+                        outline-none cursor-pointer"
+                    >
+                      {qualityLevels.map(level => (
+                        <option key={level} value={level}>
+                          {level === 'auto' ? 'Auto' : level}
+                        </option>
+                      ))}
+                    </select>
+                  </Card>
+                )}
 
                 {/* Volume Control */}
                 <Card className="flex flex-row items-center gap-1.5 px-2 py-0.5 bg-accent/15 flex-shrink-0">

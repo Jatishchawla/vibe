@@ -61,6 +61,26 @@ export function createHlsPlayerInstance(options: {
     let readyFired = false;
     let recovering = false;
 
+    /** "720p", or the bitrate when a rendition carries no height. */
+    const labelForLevel = (level: {height?: number; bitrate?: number}): string =>
+        level.height
+            ? `${level.height}p`
+            : `${Math.round((level.bitrate ?? 0) / 1000)}kbps`;
+
+    /** Distinct rendition labels, highest quality first. */
+    const qualityLabels = (): string[] => {
+        if (!hls) return [];
+        const labels = hls.levels
+            .map((level, index) => ({
+                label: labelForLevel(level),
+                height: level.height ?? 0,
+                bitrate: level.bitrate ?? index,
+            }))
+            .sort((a, b) => b.height - a.height || b.bitrate - a.bitrate)
+            .map(l => l.label);
+        return [...new Set(labels)];
+    };
+
     const handle: HlsPlayerHandle = {
         playVideo: () => void video.play().catch(() => undefined),
         pauseVideo: () => video.pause(),
@@ -79,12 +99,28 @@ export function createHlsPlayerInstance(options: {
         },
         getAvailablePlaybackRates: () => [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2],
         /**
-         * HLS selects quality itself from the bitrate ladder, so the explicit
-         * quality controls are inert here rather than absent — video.tsx calls
-         * them unconditionally and must not have to know which player it holds.
+         * Renditions from the HLS ladder, highest first, with 'auto' for adaptive.
+         *
+         * Labels are the player's own vocabulary rather than a translation of
+         * YouTube's ('hd720' etc.) — the control just renders whatever strings the
+         * active player reports and hands the chosen one back, so neither side
+         * needs to know about the other.
          */
-        getAvailableQualityLevels: () => [],
-        setPlaybackQuality: () => undefined,
+        getAvailableQualityLevels: () => ['auto', ...qualityLabels()],
+        setPlaybackQuality: (label: string) => {
+          if (!hls) return;
+          if (label === 'auto') {
+            hls.currentLevel = -1; // hand control back to adaptive switching
+            return;
+          }
+          const index = hls.levels.findIndex(l => labelForLevel(l) === label);
+          if (index >= 0) hls.currentLevel = index;
+        },
+        getPlaybackQuality: () => {
+          if (!hls || hls.currentLevel < 0) return 'auto';
+          const level = hls.levels[hls.currentLevel];
+          return level ? labelForLevel(level) : 'auto';
+        },
         loadModule: () => undefined,
         setOption: () => undefined,
         destroy: () => {
