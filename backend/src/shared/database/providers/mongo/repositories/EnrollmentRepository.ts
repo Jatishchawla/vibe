@@ -1567,14 +1567,23 @@ export class EnrollmentRepository {
   ) {
     await this.init();
 
+    if (!ObjectId.isValid(courseId) || !ObjectId.isValid(courseVersionId)) {
+      return {
+        totalDocuments: 0,
+        totalPages: 0,
+        currentPage: limit > 0 ? Math.floor(skip / limit) + 1 : 1,
+        enrollments: [],
+      };
+    }
+
     const baseMatch: any = {
       courseId: { $in: [courseId, new ObjectId(courseId)] },
       courseVersionId: { $in: [courseVersionId, new ObjectId(courseVersionId)] },
     };
 
-    // if (cohort) {
-    //   baseMatch.cohortId = new ObjectId(cohort);
-    // }
+    if (cohort && ObjectId.isValid(cohort)) {
+      baseMatch.cohortId = new ObjectId(cohort);
+    }
     // else if (cohorts && cohorts.length > 0 && filter === 'STUDENT') {
     //   // baseMatch.cohortId = { $in: cohorts };
     // }
@@ -1619,6 +1628,10 @@ export class EnrollmentRepository {
               onNull: null,
             },
           },
+          // Enrollments that never recorded a progress event have no
+          // percentCompleted field; coerce so the value returned to the client
+          // and the progress sort below both see 0 rather than missing.
+          percentCompleted: { $ifNull: ['$percentCompleted', 0] },
         },
       },
       {
@@ -3679,6 +3692,31 @@ export class EnrollmentRepository {
         'Failed to fetch student enrollments for the course version',
       );
     }
+  }
+
+  /**
+   * Lightweight count of active student enrollments for a course version,
+   * across all cohorts. Used to scale the crowd-question peer-validation gate
+   * threshold to cohort size (see studentQuestions/services/crowdGate.ts) —
+   * intentionally a countDocuments rather than the fuller
+   * getVersionEnrollmentStats aggregation, since only the count is needed.
+   */
+  async countActiveStudents(
+    courseId: string,
+    courseVersionId: string,
+    session?: ClientSession,
+  ): Promise<number> {
+    await this.init();
+    return await this.enrollmentCollection.countDocuments(
+      {
+        courseId: { $in: [courseId, new ObjectId(courseId)] },
+        courseVersionId: { $in: [courseVersionId, new ObjectId(courseVersionId)] },
+        role: 'STUDENT',
+        status: { $regex: /^active$/i },
+        isDeleted: { $ne: true },
+      },
+      { session },
+    );
   }
 
   /**
