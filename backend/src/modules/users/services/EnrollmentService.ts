@@ -1187,6 +1187,16 @@ export class EnrollmentService extends BaseService {
     cohortScope?: ObjectId[] | null,
   ) {
     return this._withTransaction(async (session: ClientSession) => {
+      if (!ObjectId.isValid(courseId) || !ObjectId.isValid(courseVersionId)) {
+        // readVersion below would throw a BSONError (surfacing as a 500) on a
+        // malformed id; treat it the same as an unknown version.
+        return {
+          enrollments: [],
+          totalCount: 0,
+          totalPages: 0,
+          currentPage: 0,
+        };
+      }
       const courseVersion = await this.courseRepo.readVersion(
         courseVersionId,
         session,
