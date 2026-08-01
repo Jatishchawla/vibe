@@ -22,36 +22,29 @@ const ALLOWED_SOURCE_EXTENSIONS = new Set([
 ]);
 
 /**
- * Object key for a raw upload: `<courseId>/<versionId>/<assetId>/source<ext>`.
+ * Object key for a raw upload: `uploads/<assetId>/source<ext>`.
  *
- * Nested rather than joined into one segment: the ids are what make a path
- * unambiguous, but `<courseId>-<versionId>` put 49 characters in a single folder
- * name, which is unreadable in a bucket browser. Nesting keeps the same
- * information while letting each level be clicked through.
- *
- * Course and version ids rather than names, because names change, can repeat, and
- * contain spaces — a rename would leave paths matching nothing.
- *
- * Within that, keyed by assetId rather than the original filename so two
- * instructors uploading `lecture.mp4` cannot overwrite each other, and so a path
- * cannot be guessed from a video's title.
+ * Flat under a single `uploads/` prefix, keyed by assetId. Not by filename, so two
+ * instructors uploading `lecture.mp4` cannot overwrite each other and a path cannot
+ * be guessed from a video's title; the assetId also ties the object to exactly one
+ * database row.
  *
  * The extension is preserved deliberately — the transcoding trigger is owned
  * outside this repo and may key off it, so dropping it would risk uploads that
  * silently never process.
  *
- * Existing assets keep whatever key they were created with, since the stored
- * `uploadObjectKey` is what every later lookup uses; this shape applies to new
- * uploads only and needs no migration.
+ * This layout has changed twice and may change again. It costs no migration each
+ * time because every later lookup reads the `uploadObjectKey` stored on the asset
+ * rather than recomputing it, and `candidateStreamPrefixes` derives its fallbacks
+ * from that stored key — so objects written under any previous shape keep
+ * resolving. Preserve that property if the layout moves again.
  */
 export function buildUploadObjectKey(input: {
   assetId: string;
   originalFileName: string;
-  courseId: string;
-  courseVersionId: string;
 }): string {
   const ext = normalizeExtension(input.originalFileName);
-  return `${input.courseId}/${input.courseVersionId}/${input.assetId}/source${ext}`;
+  return `uploads/${input.assetId}/source${ext}`;
 }
 
 /**

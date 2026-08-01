@@ -49,11 +49,9 @@ describe('real pipeline output', () => {
     const uploadKey = buildUploadObjectKey({
       assetId: 'abc123',
       originalFileName: 'lecture.mp4',
-      courseId: 'course1',
-      courseVersionId: 'ver1',
     });
     expect(expectedMasterPlaylistKey(uploadKey)).toBe(
-      'course1/ver1/abc123/source.mp4/manifest.m3u8',
+      'uploads/abc123/source.mp4/manifest.m3u8',
     );
   });
 
@@ -63,8 +61,6 @@ describe('real pipeline output', () => {
     const uploadKey = buildUploadObjectKey({
       assetId: 'abc123',
       originalFileName: 'lecture.mp4',
-      courseId: 'course1',
-      courseVersionId: 'ver1',
     });
     const [ownFolder] = candidateStreamPrefixes('abc123', uploadKey);
     expect(expectedMasterPlaylistKey(uploadKey).startsWith(ownFolder)).toBe(true);
@@ -158,75 +154,42 @@ describe('isMasterPlaylistBody', () => {
 });
 
 describe('buildUploadObjectKey', () => {
-  const scope = {courseId: 'course1', courseVersionId: 'ver1'};
-
-  it('nests course, version, then assetId', () => {
+  it('keys by assetId under a flat uploads/ prefix', () => {
     expect(
       buildUploadObjectKey({
-        ...scope,
         assetId: 'abc123',
         originalFileName: 'lecture 01.mp4',
       }),
-    ).toBe('course1/ver1/abc123/source.mp4');
+    ).toBe('uploads/abc123/source.mp4');
   });
 
   it('keys by assetId, not filename, so two uploads cannot collide', () => {
     const a = buildUploadObjectKey({
-      ...scope,
       assetId: 'aaa',
       originalFileName: 'lecture.mp4',
     });
     const b = buildUploadObjectKey({
-      ...scope,
       assetId: 'bbb',
       originalFileName: 'lecture.mp4',
     });
     expect(a).not.toBe(b);
   });
 
-  it('separates videos belonging to different course versions', () => {
-    const v1 = buildUploadObjectKey({
-      courseId: 'c1',
-      courseVersionId: 'v1',
-      assetId: 'abc',
-      originalFileName: 'a.mp4',
-    });
-    const v2 = buildUploadObjectKey({
-      courseId: 'c1',
-      courseVersionId: 'v2',
-      assetId: 'abc',
-      originalFileName: 'a.mp4',
-    });
-    expect(v1).not.toBe(v2);
-  });
-
   it('keeps the extension, since the external trigger may key off it', () => {
     expect(
-      buildUploadObjectKey({
-        ...scope,
-        assetId: 'abc123',
-        originalFileName: 'Lecture.MOV',
-      }),
+      buildUploadObjectKey({assetId: 'abc123', originalFileName: 'Lecture.MOV'}),
     ).toMatch(/\.mov$/);
   });
 
   it('rejects a non-video extension', () => {
     expect(() =>
-      buildUploadObjectKey({
-        ...scope,
-        assetId: 'abc123',
-        originalFileName: 'notes.txt',
-      }),
+      buildUploadObjectKey({assetId: 'abc123', originalFileName: 'notes.txt'}),
     ).toThrow(/Unsupported video file type/);
   });
 
   it('rejects a file with no extension', () => {
     expect(() =>
-      buildUploadObjectKey({
-        ...scope,
-        assetId: 'abc123',
-        originalFileName: 'lecture',
-      }),
+      buildUploadObjectKey({assetId: 'abc123', originalFileName: 'lecture'}),
     ).toThrow(/Unsupported video file type/);
   });
 });
@@ -254,23 +217,27 @@ describe('candidateStreamPrefixes', () => {
   it('derives from the stored upload key rather than a fixed layout', () => {
     const prefixes = candidateStreamPrefixes(
       'abc123',
-      'course1/ver1/abc123/source.mp4',
+      'uploads/abc123/source.mp4',
     );
     expect(prefixes).toEqual([
-      'course1/ver1/abc123/',
-      'course1/ver1/abc123/source/',
+      'uploads/abc123/',
+      'uploads/abc123/source/',
       'abc123/',
     ]);
   });
 
-  it('still resolves assets created under the older uploads/ layout', () => {
-    // The key shape changed after these were written; deriving from the stored
-    // key rather than assuming a prefix is what keeps them working.
-    const prefixes = candidateStreamPrefixes(
-      'abc123',
-      'uploads/abc123/source.mp4',
+  /**
+   * The layout has changed more than once. Deriving fallbacks from each asset's
+   * stored key — rather than assuming today's shape — is what lets objects written
+   * under any previous layout keep resolving with no migration.
+   */
+  it.each([
+    ['course1-ver1/abc123/source.mp4', 'course1-ver1/abc123/'],
+    ['course1/ver1/abc123/source.mp4', 'course1/ver1/abc123/'],
+  ])('still resolves an asset stored at %s', (storedKey, expectedPrefix) => {
+    expect(candidateStreamPrefixes('abc123', storedKey)).toContain(
+      expectedPrefix,
     );
-    expect(prefixes).toContain('uploads/abc123/');
   });
 
   it('falls back to the asset id alone without an upload key', () => {
@@ -280,7 +247,7 @@ describe('candidateStreamPrefixes', () => {
   it('never emits a prefix that escapes the asset', () => {
     for (const prefix of candidateStreamPrefixes(
       'abc123',
-      'course1/ver1/abc123/source.mp4',
+      'uploads/abc123/source.mp4',
     )) {
       expect(prefix).toContain('abc123');
       expect(prefix.endsWith('/')).toBe(true);

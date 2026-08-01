@@ -107,8 +107,6 @@ export class VideoAssetService {
     const uploadObjectKey = buildUploadObjectKey({
       assetId: assetId.toString(),
       originalFileName: input.fileName,
-      courseId: input.courseId,
-      courseVersionId: input.courseVersionId,
     });
 
     const asset = new VideoAsset({
