@@ -53,8 +53,8 @@ export const storageConfig = {
     playbackUrlTtlMinutes: Number(
       env('VIDEO_PLAYBACK_URL_TTL_MINUTES') || '360',
     ),
-    /** Largest upload we will issue a URL for (bytes). Default 5 GB. */
-    maxUploadBytes: Number(env('VIDEO_MAX_UPLOAD_BYTES') || `${5 * 1024 ** 3}`),
+    /** Largest upload we will issue a URL for (bytes). Default 2 GiB. */
+    maxUploadBytes: Number(env('VIDEO_MAX_UPLOAD_BYTES') || `${2 * 1024 ** 3}`),
 
     /**
      * Cloud CDN in front of the stream bucket, e.g. cdn.vibe.vicharanashala.ai.

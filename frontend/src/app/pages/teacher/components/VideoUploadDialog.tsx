@@ -15,6 +15,13 @@ import {
 } from '@/components/ui/dialog';
 import { useVideoUpload } from '@/hooks/media-hooks';
 
+/**
+ * Client-side copy of the server's limit, so a teacher who picks a 3 GB file is
+ * told immediately rather than after the request. The server enforces it too —
+ * this is for feedback, not for security.
+ */
+const MAX_UPLOAD_BYTES = 2 * 1024 ** 3;
+
 /** Filename without its extension — a far better default title than REC_0042.mp4. */
 function suggestTitle(fileName: string): string {
   return fileName.replace(/\.[^./\\]+$/, '') || fileName;
@@ -67,6 +74,16 @@ export default function VideoUploadDialog({
 
   const handleFileChosen = (chosen?: File | null) => {
     if (!chosen) return;
+
+    if (chosen.size > MAX_UPLOAD_BYTES) {
+      toast.error(
+        `That file is ${formatBytes(chosen.size)}. The maximum upload size is 2 GB — ` +
+        'please compress it or split the recording.',
+      );
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
     setFile(chosen);
     // Only prefill while untouched, so a typed title is never overwritten by
     // swapping the file.
@@ -174,7 +191,7 @@ export default function VideoUploadDialog({
               <div className="rounded-md border border-dashed p-6 text-center">
                 <Upload className="mx-auto h-7 w-7 text-muted-foreground" />
                 <p className="mt-2 text-xs text-muted-foreground">
-                  MP4, MOV, MKV, WebM or AVI
+                  MP4, MOV, MKV, WebM or AVI · up to 2 GB
                 </p>
                 <Button
                   type="button"

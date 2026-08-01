@@ -54,15 +54,18 @@ export class CreateVideoUploadUrlBody {
 
   @JSONSchema({
     title: 'Size in Bytes',
-    description: 'Optional file size, validated against the configured maximum',
+    description:
+      'File size, checked against the configured maximum. Required, not optional: ' +
+      'the size limit is enforced from this value, so allowing it to be omitted ' +
+      'would let a caller skip the check entirely.',
     example: 524288000,
     type: 'number',
   })
-  @IsOptional()
+  @IsNotEmpty()
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  sizeBytes?: number;
+  sizeBytes: number;
 
   @JSONSchema({
     title: 'Title',

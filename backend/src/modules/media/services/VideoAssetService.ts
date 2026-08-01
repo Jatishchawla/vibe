@@ -94,12 +94,11 @@ export class VideoAssetService {
     if (!input.contentType?.startsWith('video/')) {
       throw new BadRequestError('contentType must be a video/* MIME type.');
     }
-    if (
-      input.sizeBytes !== undefined &&
-      input.sizeBytes > storageConfig.video.maxUploadBytes
-    ) {
+    const {maxUploadBytes} = storageConfig.video;
+    if (input.sizeBytes !== undefined && input.sizeBytes > maxUploadBytes) {
       throw new BadRequestError(
-        `File exceeds the maximum upload size of ${storageConfig.video.maxUploadBytes} bytes.`,
+        `This video is ${formatGiB(input.sizeBytes)} — the maximum upload size is ` +
+          `${formatGiB(maxUploadBytes)}. Please compress it or split the recording.`,
       );
     }
 
@@ -478,6 +477,12 @@ export class VideoAssetService {
 function wasPolledRecently(asset: IVideoAsset): boolean {
   if (!asset.lastPolledAt) return false;
   return Date.now() - new Date(asset.lastPolledAt).getTime() < REFRESH_COOLDOWN_MS;
+}
+
+/** Human-readable size, so the limit is stated the way the file manager shows it. */
+function formatGiB(bytes: number): string {
+  const gib = bytes / 1024 ** 3;
+  return gib >= 1 ? `${gib.toFixed(2)} GB` : `${Math.round(bytes / 1024 ** 2)} MB`;
 }
 
 function requireUserId(user: IUser): string {
