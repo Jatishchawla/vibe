@@ -46,18 +46,28 @@ describe('real pipeline output', () => {
   });
 
   it('derives the key for a ViBe upload path', () => {
-    const uploadKey = buildUploadObjectKey('abc123', 'lecture.mp4');
+    const uploadKey = buildUploadObjectKey({
+      assetId: 'abc123',
+      originalFileName: 'lecture.mp4',
+      courseId: 'course1',
+      courseVersionId: 'ver1',
+    });
     expect(expectedMasterPlaylistKey(uploadKey)).toBe(
-      'uploads/abc123/source.mp4/manifest.m3u8',
+      'course1-ver1/abc123/source.mp4/manifest.m3u8',
     );
   });
 
   it('is still reachable by the fallback prefix scan', () => {
-    // The output nests under the full input object name, so the mirrored-input
-    // prefix must still match it if the fast path is ever missed.
-    const uploadKey = buildUploadObjectKey('abc123', 'lecture.mp4');
-    const [mirrored] = candidateStreamPrefixes('abc123', uploadKey);
-    expect(expectedMasterPlaylistKey(uploadKey).startsWith(mirrored)).toBe(true);
+    // The output nests under the full input object name, so the asset's own
+    // folder prefix must still match it if the fast path is ever missed.
+    const uploadKey = buildUploadObjectKey({
+      assetId: 'abc123',
+      originalFileName: 'lecture.mp4',
+      courseId: 'course1',
+      courseVersionId: 'ver1',
+    });
+    const [ownFolder] = candidateStreamPrefixes('abc123', uploadKey);
+    expect(expectedMasterPlaylistKey(uploadKey).startsWith(ownFolder)).toBe(true);
   });
 });
 
@@ -148,28 +158,76 @@ describe('isMasterPlaylistBody', () => {
 });
 
 describe('buildUploadObjectKey', () => {
-  it('keys the object by assetId so filenames cannot collide', () => {
-    expect(buildUploadObjectKey('abc123', 'lecture 01.mp4')).toBe(
-      'uploads/abc123/source.mp4',
-    );
+  const scope = {courseId: 'course1', courseVersionId: 'ver1'};
+
+  it('groups by course version, then by assetId', () => {
+    expect(
+      buildUploadObjectKey({
+        ...scope,
+        assetId: 'abc123',
+        originalFileName: 'lecture 01.mp4',
+      }),
+    ).toBe('course1-ver1/abc123/source.mp4');
   });
 
-  it('normalizes extension casing', () => {
-    expect(buildUploadObjectKey('abc123', 'Lecture.MOV')).toBe(
-      'uploads/abc123/source.mov',
-    );
+  it('keys by assetId, not filename, so two uploads cannot collide', () => {
+    const a = buildUploadObjectKey({
+      ...scope,
+      assetId: 'aaa',
+      originalFileName: 'lecture.mp4',
+    });
+    const b = buildUploadObjectKey({
+      ...scope,
+      assetId: 'bbb',
+      originalFileName: 'lecture.mp4',
+    });
+    expect(a).not.toBe(b);
+  });
+
+  it('separates videos belonging to different course versions', () => {
+    const v1 = buildUploadObjectKey({
+      courseId: 'c1',
+      courseVersionId: 'v1',
+      assetId: 'abc',
+      originalFileName: 'a.mp4',
+    });
+    const v2 = buildUploadObjectKey({
+      courseId: 'c1',
+      courseVersionId: 'v2',
+      assetId: 'abc',
+      originalFileName: 'a.mp4',
+    });
+    expect(v1).not.toBe(v2);
+  });
+
+  it('keeps the extension, since the external trigger may key off it', () => {
+    expect(
+      buildUploadObjectKey({
+        ...scope,
+        assetId: 'abc123',
+        originalFileName: 'Lecture.MOV',
+      }),
+    ).toMatch(/\.mov$/);
   });
 
   it('rejects a non-video extension', () => {
-    expect(() => buildUploadObjectKey('abc123', 'notes.txt')).toThrow(
-      /Unsupported video file type/,
-    );
+    expect(() =>
+      buildUploadObjectKey({
+        ...scope,
+        assetId: 'abc123',
+        originalFileName: 'notes.txt',
+      }),
+    ).toThrow(/Unsupported video file type/);
   });
 
   it('rejects a file with no extension', () => {
-    expect(() => buildUploadObjectKey('abc123', 'lecture')).toThrow(
-      /Unsupported video file type/,
-    );
+    expect(() =>
+      buildUploadObjectKey({
+        ...scope,
+        assetId: 'abc123',
+        originalFileName: 'lecture',
+      }),
+    ).toThrow(/Unsupported video file type/);
   });
 });
 
@@ -193,37 +251,39 @@ describe('isAllowedSourceFileName', () => {
  * asset, so a probe can never read another asset's output.
  */
 describe('candidateStreamPrefixes', () => {
-  it('covers input-path mirroring, flattening, and basename nesting', () => {
+  it('derives from the stored upload key rather than a fixed layout', () => {
+    const prefixes = candidateStreamPrefixes(
+      'abc123',
+      'course1-ver1/abc123/source.mp4',
+    );
+    expect(prefixes).toEqual([
+      'course1-ver1/abc123/',
+      'course1-ver1/abc123/source/',
+      'abc123/',
+    ]);
+  });
+
+  it('still resolves assets created under the older uploads/ layout', () => {
+    // The key shape changed after these were written; deriving from the stored
+    // key rather than assuming a prefix is what keeps them working.
     const prefixes = candidateStreamPrefixes(
       'abc123',
       'uploads/abc123/source.mp4',
     );
-    expect(prefixes).toEqual([
-      'uploads/abc123/',
-      'abc123/',
-      'uploads/abc123/source/',
-    ]);
+    expect(prefixes).toContain('uploads/abc123/');
   });
 
-  it('still returns usable prefixes without an upload key', () => {
-    expect(candidateStreamPrefixes('abc123')).toEqual([
-      'uploads/abc123/',
-      'abc123/',
-    ]);
+  it('falls back to the asset id alone without an upload key', () => {
+    expect(candidateStreamPrefixes('abc123')).toEqual(['abc123/']);
   });
 
   it('never emits a prefix that escapes the asset', () => {
     for (const prefix of candidateStreamPrefixes(
       'abc123',
-      'uploads/abc123/source.mp4',
+      'course1-ver1/abc123/source.mp4',
     )) {
       expect(prefix).toContain('abc123');
       expect(prefix.endsWith('/')).toBe(true);
     }
-  });
-
-  it('deduplicates when the derived prefix repeats another candidate', () => {
-    const prefixes = candidateStreamPrefixes('abc123', 'abc123.mp4');
-    expect(prefixes).toEqual(['uploads/abc123/', 'abc123/']);
   });
 });

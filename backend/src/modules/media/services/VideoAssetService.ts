@@ -105,10 +105,12 @@ export class VideoAssetService {
 
     // The object key embeds the assetId, so the id has to exist first.
     const assetId = new ObjectId();
-    const uploadObjectKey = buildUploadObjectKey(
-      assetId.toString(),
-      input.fileName,
-    );
+    const uploadObjectKey = buildUploadObjectKey({
+      assetId: assetId.toString(),
+      originalFileName: input.fileName,
+      courseId: input.courseId,
+      courseVersionId: input.courseVersionId,
+    });
 
     const asset = new VideoAsset({
       courseId: input.courseId,

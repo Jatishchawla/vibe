@@ -22,16 +22,29 @@ const ALLOWED_SOURCE_EXTENSIONS = new Set([
 ]);
 
 /**
- * Object key for a raw upload. Keyed by assetId (not filename) so two teachers
- * uploading `lecture.mp4` cannot collide, and so the key is guessable only by
- * someone who already knows the assetId.
+ * Object key for a raw upload: `<courseId>-<versionId>/<assetId>/source<ext>`.
+ *
+ * Grouped by course version so a bucket can be browsed per course rather than as
+ * one flat pile of ids. Within that, keyed by assetId rather than the original
+ * filename so two instructors uploading `lecture.mp4` cannot overwrite each other,
+ * and so a path cannot be guessed from a video's title.
+ *
+ * The extension is preserved deliberately — the transcoding trigger is owned
+ * outside this repo and may key off it, so dropping it would risk uploads that
+ * silently never process.
+ *
+ * Existing assets keep whatever key they were created with, since the stored
+ * `uploadObjectKey` is what every later lookup uses; this shape applies to new
+ * uploads only and needs no migration.
  */
-export function buildUploadObjectKey(
-  assetId: string,
-  originalFileName: string,
-): string {
-  const ext = normalizeExtension(originalFileName);
-  return `uploads/${assetId}/source${ext}`;
+export function buildUploadObjectKey(input: {
+  assetId: string;
+  originalFileName: string;
+  courseId: string;
+  courseVersionId: string;
+}): string {
+  const ext = normalizeExtension(input.originalFileName);
+  return `${input.courseId}-${input.courseVersionId}/${input.assetId}/source${ext}`;
 }
 
 /**
@@ -71,18 +84,21 @@ export function candidateStreamPrefixes(
   assetId: string,
   uploadObjectKey?: string,
 ): string[] {
-  const candidates = [
-    // The transcoder mirrored the input path verbatim.
-    `uploads/${assetId}/`,
-    // Output was flattened to just the asset id.
-    `${assetId}/`,
-  ];
+  const candidates: string[] = [];
 
-  // Nested under the input file's basename, e.g. uploads/<id>/source/…
   if (uploadObjectKey) {
+    // Derived from the stored upload key rather than a fixed layout, so assets
+    // created under an older key shape still resolve after the layout changed.
+    const directory = uploadObjectKey.replace(/\/[^/]*$/, '');
     const withoutExtension = uploadObjectKey.replace(/\.[^./]+$/, '');
-    candidates.push(`${withoutExtension}/`);
+    candidates.push(
+      `${directory}/`, // the asset's own folder
+      `${withoutExtension}/`, // nested under the input basename
+    );
   }
+
+  // Output flattened to just the asset id.
+  candidates.push(`${assetId}/`);
 
   return [...new Set(candidates)];
 }
