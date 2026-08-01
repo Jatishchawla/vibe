@@ -53,7 +53,7 @@ describe('real pipeline output', () => {
       courseVersionId: 'ver1',
     });
     expect(expectedMasterPlaylistKey(uploadKey)).toBe(
-      'course1-ver1/abc123/source.mp4/manifest.m3u8',
+      'course1/ver1/abc123/source.mp4/manifest.m3u8',
     );
   });
 
@@ -160,14 +160,14 @@ describe('isMasterPlaylistBody', () => {
 describe('buildUploadObjectKey', () => {
   const scope = {courseId: 'course1', courseVersionId: 'ver1'};
 
-  it('groups by course version, then by assetId', () => {
+  it('nests course, version, then assetId', () => {
     expect(
       buildUploadObjectKey({
         ...scope,
         assetId: 'abc123',
         originalFileName: 'lecture 01.mp4',
       }),
-    ).toBe('course1-ver1/abc123/source.mp4');
+    ).toBe('course1/ver1/abc123/source.mp4');
   });
 
   it('keys by assetId, not filename, so two uploads cannot collide', () => {
@@ -254,11 +254,11 @@ describe('candidateStreamPrefixes', () => {
   it('derives from the stored upload key rather than a fixed layout', () => {
     const prefixes = candidateStreamPrefixes(
       'abc123',
-      'course1-ver1/abc123/source.mp4',
+      'course1/ver1/abc123/source.mp4',
     );
     expect(prefixes).toEqual([
-      'course1-ver1/abc123/',
-      'course1-ver1/abc123/source/',
+      'course1/ver1/abc123/',
+      'course1/ver1/abc123/source/',
       'abc123/',
     ]);
   });
@@ -280,7 +280,7 @@ describe('candidateStreamPrefixes', () => {
   it('never emits a prefix that escapes the asset', () => {
     for (const prefix of candidateStreamPrefixes(
       'abc123',
-      'course1-ver1/abc123/source.mp4',
+      'course1/ver1/abc123/source.mp4',
     )) {
       expect(prefix).toContain('abc123');
       expect(prefix.endsWith('/')).toBe(true);

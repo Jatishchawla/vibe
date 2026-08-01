@@ -22,12 +22,19 @@ const ALLOWED_SOURCE_EXTENSIONS = new Set([
 ]);
 
 /**
- * Object key for a raw upload: `<courseId>-<versionId>/<assetId>/source<ext>`.
+ * Object key for a raw upload: `<courseId>/<versionId>/<assetId>/source<ext>`.
  *
- * Grouped by course version so a bucket can be browsed per course rather than as
- * one flat pile of ids. Within that, keyed by assetId rather than the original
- * filename so two instructors uploading `lecture.mp4` cannot overwrite each other,
- * and so a path cannot be guessed from a video's title.
+ * Nested rather than joined into one segment: the ids are what make a path
+ * unambiguous, but `<courseId>-<versionId>` put 49 characters in a single folder
+ * name, which is unreadable in a bucket browser. Nesting keeps the same
+ * information while letting each level be clicked through.
+ *
+ * Course and version ids rather than names, because names change, can repeat, and
+ * contain spaces — a rename would leave paths matching nothing.
+ *
+ * Within that, keyed by assetId rather than the original filename so two
+ * instructors uploading `lecture.mp4` cannot overwrite each other, and so a path
+ * cannot be guessed from a video's title.
  *
  * The extension is preserved deliberately — the transcoding trigger is owned
  * outside this repo and may key off it, so dropping it would risk uploads that
@@ -44,7 +51,7 @@ export function buildUploadObjectKey(input: {
   courseVersionId: string;
 }): string {
   const ext = normalizeExtension(input.originalFileName);
-  return `${input.courseId}-${input.courseVersionId}/${input.assetId}/source${ext}`;
+  return `${input.courseId}/${input.courseVersionId}/${input.assetId}/source${ext}`;
 }
 
 /**
