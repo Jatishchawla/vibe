@@ -11,15 +11,23 @@ import path from 'path';
  * to a single deterministic path; nothing outside this file changes.
  */
 
-/** Extensions we accept as a source upload. */
-const ALLOWED_SOURCE_EXTENSIONS = new Set([
-  '.mp4',
-  '.mov',
-  '.mkv',
-  '.webm',
-  '.avi',
-  '.m4v',
-]);
+/**
+ * Extensions accepted as a source upload — MP4 only for now.
+ *
+ * Deliberately narrow: the transcoding pipeline is owned outside this repo and has
+ * only been exercised with MP4, so accepting containers we have not seen it handle
+ * would produce uploads that land in the bucket and then silently never become
+ * playable. Widen this set once a format has actually been verified end to end.
+ *
+ * The single source of truth for what is allowed — the request validator and the
+ * error message both derive from it, so they cannot drift apart.
+ */
+const ALLOWED_SOURCE_EXTENSIONS = new Set(['.mp4']);
+
+/** Human-readable list for error messages, derived so it stays in step. */
+export const ALLOWED_SOURCE_EXTENSION_LIST = [
+  ...ALLOWED_SOURCE_EXTENSIONS,
+].join(', ');
 
 /**
  * Object key for a raw upload: `uploads/<assetId>/source<ext>`.

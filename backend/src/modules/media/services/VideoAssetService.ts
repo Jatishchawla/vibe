@@ -20,6 +20,7 @@ import {
   PlaybackUrlProvider,
 } from './storage/PlaybackUrlProvider.js';
 import {
+  ALLOWED_SOURCE_EXTENSION_LIST,
   buildUploadObjectKey,
   isAllowedSourceFileName,
 } from './storage/videoStoragePaths.js';
@@ -87,12 +88,15 @@ export class VideoAssetService {
     await this.assertCanManage(input.user, input.courseId, input.courseVersionId);
 
     if (!isAllowedSourceFileName(input.fileName)) {
+      // Message derived from the allow-list so the two cannot disagree.
       throw new BadRequestError(
-        'Unsupported video file type. Allowed: .mp4, .mov, .mkv, .webm, .avi, .m4v',
+        `Unsupported video file type. Allowed: ${ALLOWED_SOURCE_EXTENSION_LIST}`,
       );
     }
-    if (!input.contentType?.startsWith('video/')) {
-      throw new BadRequestError('contentType must be a video/* MIME type.');
+    if (input.contentType !== 'video/mp4') {
+      // Pinned rather than any video/*: this exact value goes into the upload
+      // signature, and the pipeline has only been verified with MP4.
+      throw new BadRequestError('contentType must be video/mp4.');
     }
     const {maxUploadBytes} = storageConfig.video;
     if (input.sizeBytes !== undefined && input.sizeBytes > maxUploadBytes) {

@@ -175,10 +175,10 @@ describe('buildUploadObjectKey', () => {
     expect(a).not.toBe(b);
   });
 
-  it('keeps the extension, since the external trigger may key off it', () => {
+  it('normalises extension casing', () => {
     expect(
-      buildUploadObjectKey({assetId: 'abc123', originalFileName: 'Lecture.MOV'}),
-    ).toMatch(/\.mov$/);
+      buildUploadObjectKey({assetId: 'abc123', originalFileName: 'Lecture.MP4'}),
+    ).toBe('uploads/abc123/source.mp4');
   });
 
   it('rejects a non-video extension', () => {
@@ -195,10 +195,20 @@ describe('buildUploadObjectKey', () => {
 });
 
 describe('isAllowedSourceFileName', () => {
-  it.each(['a.mp4', 'a.mov', 'a.mkv', 'a.webm', 'a.avi', 'a.m4v'])(
-    'accepts %s',
+  it.each(['a.mp4', 'A.MP4', 'lecture 01.mp4'])('accepts %s', name => {
+    expect(isAllowedSourceFileName(name)).toBe(true);
+  });
+
+  /**
+   * MP4 only for now. The other containers are rejected deliberately rather than
+   * incidentally: the transcoding pipeline is owned outside this repo and has only
+   * been verified with MP4, so accepting one it cannot handle would leave an upload
+   * sitting in the bucket that never becomes playable.
+   */
+  it.each(['a.mov', 'a.mkv', 'a.webm', 'a.avi', 'a.m4v'])(
+    'rejects %s until that format is verified end to end',
     name => {
-      expect(isAllowedSourceFileName(name)).toBe(true);
+      expect(isAllowedSourceFileName(name)).toBe(false);
     },
   );
 

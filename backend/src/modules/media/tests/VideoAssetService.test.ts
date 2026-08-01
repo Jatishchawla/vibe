@@ -191,7 +191,7 @@ describe('createUploadUrl — what may be uploaded', () => {
         fileName: 'lecture.mp4',
         contentType: 'application/octet-stream',
       }),
-    ).rejects.toThrow(/video\/\* MIME type/);
+    ).rejects.toThrow(/must be video\/mp4/i);
   });
 
   it('rejects a file over the configured maximum', async () => {
@@ -220,11 +220,37 @@ describe('createUploadUrl — what may be uploaded', () => {
     const h = harness({enrollments: asInstructor});
     const result = await h.service.createUploadUrl({
       ...base,
-      fileName: 'lecture.mov',
-      contentType: 'video/quicktime',
+      fileName: 'lecture.mp4',
+      contentType: 'video/mp4',
     });
     // The PUT must send exactly this, since it is inside the signature.
-    expect(result.requiredContentType).toBe('video/quicktime');
+    expect(result.requiredContentType).toBe('video/mp4');
+  });
+
+  it('rejects a non-MP4 container, even a valid video one', async () => {
+    // Narrow on purpose: the pipeline has only been verified with MP4, so a MOV
+    // would upload successfully and then never become playable.
+    const h = harness({enrollments: asInstructor});
+    await expect(
+      h.service.createUploadUrl({
+        ...base,
+        fileName: 'lecture.mov',
+        contentType: 'video/quicktime',
+      }),
+    ).rejects.toThrow(/Unsupported video file type/);
+  });
+
+  it('rejects an MP4 filename carrying a different content type', async () => {
+    // e.g. a renamed MKV — the extension passes but the browser reports the real
+    // type, and that value is what would be pinned into the signature.
+    const h = harness({enrollments: asInstructor});
+    await expect(
+      h.service.createUploadUrl({
+        ...base,
+        fileName: 'lecture.mp4',
+        contentType: 'video/x-matroska',
+      }),
+    ).rejects.toThrow(/must be video\/mp4/i);
   });
 });
 

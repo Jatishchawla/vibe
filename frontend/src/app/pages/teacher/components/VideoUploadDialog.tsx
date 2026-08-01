@@ -75,6 +75,14 @@ export default function VideoUploadDialog({
   const handleFileChosen = (chosen?: File | null) => {
     if (!chosen) return;
 
+    // `accept` only filters the dialog; a user can still choose "All files", so the
+    // extension is checked properly here too. The server checks it as well.
+    if (!/\.mp4$/i.test(chosen.name)) {
+      toast.error('Only MP4 files can be uploaded at the moment.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
     if (chosen.size > MAX_UPLOAD_BYTES) {
       toast.error(
         `That file is ${formatBytes(chosen.size)}. The maximum upload size is 2 GB — ` +
@@ -158,7 +166,7 @@ export default function VideoUploadDialog({
             <input
               ref={fileInputRef}
               type="file"
-              accept="video/mp4,video/quicktime,video/x-matroska,video/webm,video/x-msvideo"
+              accept="video/mp4,.mp4"
               className="hidden"
               onChange={e => handleFileChosen(e.target.files?.[0])}
             />
@@ -191,7 +199,7 @@ export default function VideoUploadDialog({
               <div className="rounded-md border border-dashed p-6 text-center">
                 <Upload className="mx-auto h-7 w-7 text-muted-foreground" />
                 <p className="mt-2 text-xs text-muted-foreground">
-                  MP4, MOV, MKV, WebM or AVI · up to 2 GB
+                  MP4 only · up to 2 GB
                 </p>
                 <Button
                   type="button"
