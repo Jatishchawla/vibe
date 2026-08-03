@@ -1084,7 +1084,16 @@ function TeacherCourseContent() {
           name: videoData.name,
           description: videoData.description,
           videoDetails: {
-            URL: videoData.details.URL,
+            // URL and source/assetId are mutually exclusive — send only the pair
+            // the modal actually produced. Listing URL unconditionally would send
+            // it as undefined for an upload, and the backend would then validate
+            // the item as a YouTube video and reject it for a missing URL.
+            ...(videoData.details.source === "GCS"
+              ? {
+                source: videoData.details.source,
+                assetId: videoData.details.assetId,
+              }
+              : { URL: videoData.details.URL }),
             startTime: videoData.details.startTime,
             endTime: videoData.details.endTime,
             points: videoData.details.points,
@@ -1715,6 +1724,8 @@ function TeacherCourseContent() {
       <QuestionUploadDialog
         open={showCSVUpload}
         onOpenChange={setShowCSVUpload}
+        courseId={courseId}
+        versionId={versionId}
         onUploadComplete={async (youtubeUrl: string, csvFile: File) => {
           // Let errors propagate so QuestionUploadDialog can report the real
           // failure rather than showing a false "Content uploaded" success.
@@ -3164,6 +3175,8 @@ function TeacherCourseContent() {
                             selectedItemName={selectedItem.name}
                             action={isEditingItem ? "edit" : "view"}
                             item={selectedItemData?.item}
+                            courseId={courseId}
+                            courseVersionId={versionId}
                             onClose={() => setIsEditingItem(false)}
                             onSave={video => {
                               const formattedVideo = {
@@ -3247,6 +3260,8 @@ function TeacherCourseContent() {
                               selectedItemName={selectedItem.name}
                               action={isEditingItem ? "edit" : "view"}
                               item={selectedItemData?.item}
+                              courseId={courseId}
+                              courseVersionId={versionId}
                               onClose={() => setIsEditingItem(false)}
                               onSave={video => {
                                 const formattedVideo = {
@@ -3599,6 +3614,8 @@ function TeacherCourseContent() {
             isLoading={isLoading}
             selectedItemName={selectedItem.name}
             action="add"
+            courseId={courseId}
+            courseVersionId={versionId}
             onClose={() => setShowAddVideoModal(null)}
             onSave={video => {
               handleAddItem(
