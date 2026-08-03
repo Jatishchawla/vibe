@@ -453,6 +453,11 @@ export interface IEnrollment {
   hpPoints?: number;
   hasNewItemsAfterCompletion?: boolean;
   cohortId?: ID;
+  // Staff-only (INSTRUCTOR/STAFF): the cohorts of this version the holder may
+  // read and act on. Absent or empty means no cohort has been assigned yet,
+  // which denies access rather than granting all — see resolveCohortScope.
+  // Never set on a STUDENT row; a student's scope is their own `cohortId`.
+  assignedCohortIds?: ID[];
   policyAcknowledgedAt?: Date;
   policyReacknowledgementRequired?: boolean;
   ethicsConsentSignedAt?: Date; // doubles as the "Date" on the consent form
@@ -902,6 +907,15 @@ export interface AuthenticatedUserEnrollements {
   courseId: string;
   versionId: string;
   role: 'STUDENT' | 'INSTRUCTOR' | 'MANAGER' | 'TA' | 'STAFF';
+  /**
+   * Cohorts this enrollment confines the caller to.
+   *
+   * `null` means the role is not cohort-scoped and may read the whole version
+   * (MANAGER, TA, and legacy students whose enrollment predates cohorts).
+   * An empty array means the role *is* scoped but nothing has been assigned —
+   * that reads as "no cohorts", not "all cohorts".
+   */
+  cohortIds: string[] | null;
 }
 
 export interface AuthenticatedUser {
