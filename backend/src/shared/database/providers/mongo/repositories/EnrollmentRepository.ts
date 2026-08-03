@@ -211,6 +211,37 @@ export class EnrollmentRepository {
     );
   }
 
+  /**
+   * Replace the cohorts a staff enrollment is confined to. Wholesale
+   * replacement rather than add/remove so the caller's view of the assignment
+   * is what gets stored — two admins editing concurrently cannot merge into a
+   * set neither of them chose.
+   */
+  async updateAssignedCohorts(
+    userId: string,
+    courseId: string,
+    courseVersionId: string,
+    cohortIds: ObjectId[],
+    session?: ClientSession,
+  ): Promise<IEnrollment | null> {
+    await this.init();
+
+    const result = await this.enrollmentCollection.findOneAndUpdate(
+      {
+        userId: { $in: [userId, new ObjectId(userId)] },
+        courseId: { $in: [courseId, new ObjectId(courseId)] },
+        courseVersionId: {
+          $in: [courseVersionId, new ObjectId(courseVersionId)],
+        },
+        isDeleted: { $ne: true },
+      },
+      { $set: { assignedCohortIds: cohortIds } },
+      { session, returnDocument: 'after' },
+    );
+
+    return result as IEnrollment | null;
+  }
+
   async findActiveEnrollment(
     userId: string | ObjectId,
     courseId: string,
@@ -1561,8 +1592,7 @@ export class EnrollmentRepository {
     sortOrder: 'asc' | 'desc',
     filter: string,
     statusTab: 'ACTIVE' | 'INACTIVE' = 'ACTIVE',
-    cohort?: string,
-    cohorts?: ID[],
+    cohortScope?: ObjectId[] | null,
     session?: ClientSession,
   ) {
     await this.init();
@@ -1580,13 +1610,6 @@ export class EnrollmentRepository {
       courseId: { $in: [courseId, new ObjectId(courseId)] },
       courseVersionId: { $in: [courseVersionId, new ObjectId(courseVersionId)] },
     };
-
-    if (cohort && ObjectId.isValid(cohort)) {
-      baseMatch.cohortId = new ObjectId(cohort);
-    }
-    // else if (cohorts && cohorts.length > 0 && filter === 'STUDENT') {
-    //   // baseMatch.cohortId = { $in: cohorts };
-    // }
 
     let matchStage: any = { ...baseMatch };
 
@@ -1613,6 +1636,22 @@ export class EnrollmentRepository {
       } else if (filter === 'OTHER') {
         matchStage.role = { $ne: 'STUDENT' };
       }
+    }
+
+    // Confine the listing to the caller's cohorts. Only student rows carry a
+    // `cohortId` — staff are scoped by `assignedCohortIds` instead — so an
+    // unqualified filter would empty the instructor tab. Added under `$and`
+    // because the INACTIVE tab already owns `$or`.
+    if (cohortScope) {
+      matchStage.$and = [
+        ...(matchStage.$and ?? []),
+        {
+          $or: [
+            { cohortId: { $in: cohortScope } },
+            { role: { $ne: 'STUDENT' } },
+          ],
+        },
+      ];
     }
 
     // Initial pipeline for filtering and basic user data (required for sorting/searching)
@@ -1732,6 +1771,14 @@ export class EnrollmentRepository {
         },
         cohortName: {
           $cond: [{ $ifNull: ['$cohort.name', false] }, '$cohort.name', null],
+        },
+        // Staff scope. Empty means unscoped — course-wide — not "none".
+        assignedCohortIds: {
+          $map: {
+            input: { $ifNull: ['$assignedCohortIds', []] },
+            as: 'assignedCohortId',
+            in: { $toString: '$$assignedCohortId' },
+          },
         },
       },
     });

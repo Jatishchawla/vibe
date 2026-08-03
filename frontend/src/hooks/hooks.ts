@@ -2253,6 +2253,54 @@ export function useUpdateFollowUpInvite() {
   return { updateFollowUpInvite, loading, error };
 }
 
+// PATCH /users/{userId}/enrollments/courses/{courseId}/versions/{versionId}/cohorts
+// Replaces the cohorts an instructor is confined to on a course version. An
+// empty list clears the assignment, returning them to course-wide access.
+// Raw fetch rather than the generated client because this endpoint is not in
+// src/types/schema.ts yet — regenerate and switch to api.useMutation once it is.
+export function useAssignInstructorCohorts() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const assignCohorts = async (
+    userId: string,
+    courseId: string,
+    versionId: string,
+    cohortIds: string[],
+  ) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const url = `${import.meta.env.VITE_BASE_URL}/users/${userId}/enrollments/courses/${courseId}/versions/${versionId}/cohorts`;
+
+      const res = await fetch(url, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          authorization: `Bearer ${localStorage.getItem('firebase-auth-token')}`,
+        },
+        body: JSON.stringify({ cohortIds }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data?.message || `Failed to assign cohorts: ${res.status}`);
+      }
+
+      return data as { cohortIds: string[] };
+    } catch (err: any) {
+      setError(err.message || 'Unknown error');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { assignCohorts, loading, error };
+}
+
 // POST /setting/course-setting/{courseId}/{versionId}/follow-up-invite/backfill
 // Re-sends the configured follow-up invite to every student who already
 // completed this (source) course version but isn't yet enrolled in the target
